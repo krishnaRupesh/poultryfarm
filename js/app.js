@@ -61,3 +61,24 @@ function saveProduct() {
         alert('Product saved');
     }
 }
+
+let customers = [];
+
+function registerCustomer() {
+    const name = document.getElementById('customer-name').value;
+    const email = document.getElementById('customer-email').value;
+    const phone = document.getElementById('customer-phone').value;
+    const address = document.getElementById('customer-address').value;
+
+    if (name && email && phone && address) {
+        customers.push({ name, email, phone, address });
+        alert('Customer registered successfully!');
+        clearCustomerForm();
+    } else {
+        alert('Please fill out all fields.');
+    }
+}
+
+function clearCustomerForm() {
+    document.getElementById('customer-form').reset();
+}

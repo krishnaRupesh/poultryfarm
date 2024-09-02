@@ -1,3 +1,4 @@
+/* Existing styles.css content */
 body {
     font-family: Arial, sans-serif;
     padding: 20px;
@@ -17,8 +18,9 @@ label {
 }
 
 input[type="text"],
+input[type="email"],
 input[type="number"],
-input[type="date"] {
+textarea {
     width: 100%;
     padding: 8px;
     margin-top: 5px;
