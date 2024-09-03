@@ -11,7 +11,14 @@ function loadBalanceDetails() {
 
         details.forEach(detail => {
             const row = document.createElement('tr');
-            row.innerHTML = `<td>${detail.date}</td><td>${detail.id}</td><td>${detail.amount}</td>`;
+            row.innerHTML = `
+                <td>${detail.date}</td>
+                <td>${detail.id}</td>
+                <td>${detail.quantity}</td>
+                <td>${detail.amount}</td>
+                <td>${detail.type}</td>
+            `;
+            row.className = detail.type === 'payment' ? 'payment-row' : 'order-row';
             tbody.appendChild(row);
         });
     } else {
@@ -27,7 +34,7 @@ function getRemainingBalance(customerName) {
 function getBalanceDetails(customerName) {
     // Placeholder for actual logic to fetch balance details from the database
     return [
-        { date: '2024-09-01', id: 'ORD123', amount: '100' },
-        { date: '2024-09-02', id: 'PAY456', amount: '-50' }
+        { date: '2024-09-01', id: 'ORD123', quantity: '10', amount: '100', type: 'order' },
+        { date: '2024-09-02', id: 'PAY456', quantity: '', amount: '-50', type: 'payment' }
     ]; // Example details
 }

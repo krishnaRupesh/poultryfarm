@@ -1,3 +1,4 @@
+/* Common Styles */
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
@@ -57,4 +58,13 @@ table, th, td {
 th, td {
     padding: 8px;
     text-align: left;
+}
+
+/* New Styles for Balance Sheet */
+.order-row {
+    background-color: #f9daa1; /* Light Orange for Order */
+}
+
+.payment-row {
+    background-color: #a7f3b9; /* Light Green for Payment */
 }
