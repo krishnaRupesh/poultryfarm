@@ -6,7 +6,8 @@ CREATE TABLE customer_balance_summary (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(255) NOT NULL,
     updated_by VARCHAR(255),
-    is_deleted BOOLEAN DEFAULT FALSE
+    is_deleted BOOLEAN DEFAULT FALSE,
+    customer_name VARCHAR(255) GENERATED ALWAYS AS (SELECT customer_name FROM customers WHERE customer_id = customer_balance_summary.customer_id)
 );
 
 CREATE TABLE customer_balance_summary_audit (
@@ -19,6 +20,7 @@ CREATE TABLE customer_balance_summary_audit (
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN,
+    customer_name VARCHAR(255),
     action VARCHAR(10) NOT NULL, -- 'INSERT', 'UPDATE', 'DELETE'
     action_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -27,16 +29,16 @@ CREATE OR REPLACE FUNCTION customer_balance_summary_audit_trigger_function()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
-        INSERT INTO customer_balance_summary_audit (customer_id, remaining_balance, last_updated, created_at, updated_at, created_by, updated_by, is_deleted, action)
-        VALUES (NEW.customer_id, NEW.remaining_balance, NEW.last_updated, NEW.created_at, NEW.updated_at, NEW.created_by, NEW.updated_by, NEW.is_deleted, 'INSERT');
+        INSERT INTO customer_balance_summary_audit (customer_id, remaining_balance, last_updated, created_at, updated_at, created_by, updated_by, is_deleted, customer_name, action)
+        VALUES (NEW.customer_id, NEW.remaining_balance, NEW.last_updated, NEW.created_at, NEW.updated_at, NEW.created_by, NEW.updated_by, NEW.is_deleted, NEW.customer_name, 'INSERT');
         RETURN NEW;
     ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO customer_balance_summary_audit (customer_id, remaining_balance, last_updated, created_at, updated_at, created_by, updated_by, is_deleted, action)
-        VALUES (NEW.customer_id, NEW.remaining_balance, NEW.last_updated, NEW.created_at, NEW.updated_at, NEW.created_by, NEW.updated_by, NEW.is_deleted, 'UPDATE');
+        INSERT INTO customer_balance_summary_audit (customer_id, remaining_balance, last_updated, created_at, updated_at, created_by, updated_by, is_deleted, customer_name, action)
+        VALUES (NEW.customer_id, NEW.remaining_balance, NEW.last_updated, NEW.created_at, NEW.updated_at, NEW.created_by, NEW.updated_by, NEW.is_deleted, NEW.customer_name, 'UPDATE');
         RETURN NEW;
     ELSIF (TG_OP = 'DELETE') THEN
-        INSERT INTO customer_balance_summary_audit (customer_id, remaining_balance, last_updated, created_at, updated_at, created_by, updated_by, is_deleted, action)
-        VALUES (OLD.customer_id, OLD.remaining_balance, OLD.last_updated, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by, OLD.is_deleted, 'DELETE');
+        INSERT INTO customer_balance_summary_audit (customer_id, remaining_balance, last_updated, created_at, updated_at, created_by, updated_by, is_deleted, customer_name, action)
+        VALUES (OLD.customer_id, OLD.remaining_balance, OLD.last_updated, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by, OLD.is_deleted, OLD.customer_name, 'DELETE');
         RETURN OLD;
     END IF;
 END;

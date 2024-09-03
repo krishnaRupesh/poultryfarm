@@ -9,7 +9,8 @@ CREATE TABLE payments (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(255) NOT NULL,
     updated_by VARCHAR(255),
-    is_deleted BOOLEAN DEFAULT FALSE
+    is_deleted BOOLEAN DEFAULT FALSE,
+    customer_name VARCHAR(255) GENERATED ALWAYS AS (SELECT customer_name FROM customers WHERE customer_id = payments.customer_id)
 );
 
 CREATE TABLE payments_audit (
@@ -25,6 +26,7 @@ CREATE TABLE payments_audit (
     created_by VARCHAR(255),
     updated_by VARCHAR(255),
     is_deleted BOOLEAN,
+    customer_name VARCHAR(255),
     action VARCHAR(10) NOT NULL, -- 'INSERT', 'UPDATE', 'DELETE'
     action_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -33,16 +35,16 @@ CREATE OR REPLACE FUNCTION payments_audit_trigger_function()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
-        INSERT INTO payments_audit (payment_id, customer_id, payment_amount, payment_date, payment_mode, remarks, created_at, updated_at, created_by, updated_by, is_deleted, action)
-        VALUES (NEW.payment_id, NEW.customer_id, NEW.payment_amount, NEW.payment_date, NEW.payment_mode, NEW.remarks, NEW.created_at, NEW.updated_at, NEW.created_by, NEW.updated_by, NEW.is_deleted, 'INSERT');
+        INSERT INTO payments_audit (payment_id, customer_id, payment_amount, payment_date, payment_mode, remarks, created_at, updated_at, created_by, updated_by, is_deleted, customer_name, action)
+        VALUES (NEW.payment_id, NEW.customer_id, NEW.payment_amount, NEW.payment_date, NEW.payment_mode, NEW.remarks, NEW.created_at, NEW.updated_at, NEW.created_by, NEW.updated_by, NEW.is_deleted, NEW.customer_name, 'INSERT');
         RETURN NEW;
     ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO payments_audit (payment_id, customer_id, payment_amount, payment_date, payment_mode, remarks, created_at, updated_at, created_by, updated_by, is_deleted, action)
-        VALUES (NEW.payment_id, NEW.customer_id, NEW.payment_amount, NEW.payment_date, NEW.payment_mode, NEW.remarks, NEW.created_at, NEW.updated_at, NEW.created_by, NEW.updated_by, NEW.is_deleted, 'UPDATE');
+        INSERT INTO payments_audit (payment_id, customer_id, payment_amount, payment_date, payment_mode, remarks, created_at, updated_at, created_by, updated_by, is_deleted, customer_name, action)
+        VALUES (NEW.payment_id, NEW.customer_id, NEW.payment_amount, NEW.payment_date, NEW.payment_mode, NEW.remarks, NEW.created_at, NEW.updated_at, NEW.created_by, NEW.updated_by, NEW.is_deleted, NEW.customer_name, 'UPDATE');
         RETURN NEW;
     ELSIF (TG_OP = 'DELETE') THEN
-        INSERT INTO payments_audit (payment_id, customer_id, payment_amount, payment_date, payment_mode, remarks, created_at, updated_at, created_by, updated_by, is_deleted, action)
-        VALUES (OLD.payment_id, OLD.customer_id, OLD.payment_amount, OLD.payment_date, OLD.payment_mode, OLD.remarks, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by, OLD.is_deleted, 'DELETE');
+        INSERT INTO payments_audit (payment_id, customer_id, payment_amount, payment_date, payment_mode, remarks, created_at, updated_at, created_by, updated_by, is_deleted, customer_name, action)
+        VALUES (OLD.payment_id, OLD.customer_id, OLD.payment_amount, OLD.payment_date, OLD.payment_mode, OLD.remarks, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by, OLD.is_deleted, OLD.customer_name, 'DELETE');
         RETURN OLD;
     END IF;
 END;
