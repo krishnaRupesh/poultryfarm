@@ -1,0 +1,74 @@
+new product screen
+	product name
+	price
+	date
+
+new customer screen
+	customer name -mandatory
+	phone number -mandatory
+	address -mandatory
+	email-id
+
+
+new order screen
+	date -> show default date as current date.
+	product
+	price  -> bring the price from the product table based on date and product. if the price is not available for that date show an error like price is not available.
+	customer name 
+	quantity
+	discount price
+	remarks
+	total amount
+
+new payment screen
+	customer name
+	payment amount
+	payment date - default current date
+	payment mode
+	remarks
+
+new incident creation
+	name
+	incident type
+	incident date
+	summary
+	amount spent
+	
+incident tracking screen
+	name
+	incident type
+	incident date
+	summary
+	amount spent
+	we have to show the list of all incidents with above columns in descending order of incident date.
+	each row should have an update button. with redirect to incident update screen.
+		
+incident update screen.
+	incident-id -  dont give option to update this.
+	incident date
+	name
+	incident type -fixed values like hens, electric, machinery, and others
+	amount spent
+	summary 
+	
+		
+
+customer balance sheet summary
+	last updated at  - single value in the sheet.
+	customer name
+	remaining balance
+	(customer name, remaining balance) these values were a list of objects that come from the backend.
+	this sheet has no dropdown. we have to show the list of all customers with remaining balances in descending order.
+	add a refresh button. this refresh button will update the data in the backend and provide the latest data.
+	
+customer balance sheet details
+	customer name
+	remaining balance
+	order-date/payment-date
+	order-id / payment -id
+	quantity   - this is coming from the orders table.
+	order amount/ payment amount
+	type fixed values were order or payment
+	make all payment rows light green and all order rows light orange.
+	
+	

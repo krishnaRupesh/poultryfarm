@@ -8,18 +8,24 @@
 </head>
 <body>
     <h1>Customer Balance Sheet Summary</h1>
-    <form id="balance-summary-form">
-        <label for="customer-name">Customer Name</label>
-        <select id="customer-name" name="customer-name" required>
-            <option value="">Select Customer</option>
-            <!-- Dynamically populate this with customers -->
-        </select>
 
-        <label for="remaining-balance">Remaining Balance</label>
-        <input type="text" id="remaining-balance" name="remaining-balance" readonly>
+    <div id="last-updated">
+        <strong>Last Updated At:</strong> <span id="last-updated-time">--:--</span>
+    </div>
 
-        <button type="button" onclick="loadBalanceSummary()">Load Balance Summary</button>
-    </form>
+    <button id="refresh-button" onclick="refreshData()">Refresh Data</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Customer Name</th>
+                <th>Remaining Balance</th>
+            </tr>
+        </thead>
+        <tbody id="balance-summary">
+            <!-- Dynamically populate this with customer balance summary -->
+        </tbody>
+    </table>
 
     <script src="js/balance-summary.js"></script>
 </body>

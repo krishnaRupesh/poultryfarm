@@ -68,3 +68,9 @@ th, td {
 .payment-row {
     background-color: #a7f3b9; /* Light Green for Payment */
 }
+
+/* Styles for Last Updated Time */
+#last-updated {
+    margin-bottom: 20px;
+    font-size: 1.1em;
+}
