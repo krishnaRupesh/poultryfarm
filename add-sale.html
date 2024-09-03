@@ -9,11 +9,32 @@
 <body>
     <h1>Add Sale</h1>
     <form id="sale-form">
+        <label for="sale-date">Select Date</label>
+        <input type="date" id="sale-date" name="sale-date" onchange="updateProductPrice()">
+
+        <label for="customer">Select Customer</label>
+        <select id="customer" name="customer">
+            <option value="">Select a customer</option>
+            <!-- Customer options will be populated dynamically -->
+        </select>
+
         <label for="product">Select Product</label>
-        <input type="text" id="product" name="product">
+        <select id="product" name="product" onchange="updateProductPrice()">
+            <option value="">Select a product</option>
+            <!-- Product options will be populated dynamically -->
+        </select>
+
+        <label for="price">Original Price on Selected Date</label>
+        <input type="text" id="price" name="price" readonly>
+
+        <label for="custom-price">Custom Price (Discounted)</label>
+        <input type="number" id="custom-price" name="custom-price">
 
         <label for="quantity">Quantity</label>
         <input type="number" id="quantity" name="quantity">
+
+        <label for="remarks">Remarks</label>
+        <textarea id="remarks" name="remarks"></textarea>
 
         <button type="button" onclick="addProductToOrder()">Add Product</button>
     </form>

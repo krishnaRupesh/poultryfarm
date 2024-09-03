@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Balance Sheet Summary</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <h1>Customer Balance Sheet Summary</h1>
+    <form id="balance-summary-form">
+        <label for="customer-name">Customer Name</label>
+        <select id="customer-name" name="customer-name" required>
+            <option value="">Select Customer</option>
+            <!-- Dynamically populate this with customers -->
+        </select>
+
+        <label for="remaining-balance">Remaining Balance</label>
+        <input type="text" id="remaining-balance" name="remaining-balance" readonly>
+
+        <button type="button" onclick="loadBalanceSummary()">Load Balance Summary</button>
+    </form>
+
+    <script src="js/balance-summary.js"></script>
+</body>
+</html>

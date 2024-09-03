@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Order</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <h1>Add New Order</h1>
+    <form id="order-form">
+        <label for="order-date">Order Date</label>
+        <input type="date" id="order-date" name="order-date" value="<?= date('Y-m-d'); ?>" required>
+
+        <label for="product">Product</label>
+        <select id="product" name="product" onchange="updateProductPrice()" required>
+            <option value="">Select Product</option>
+            <!-- Dynamically populate this with products -->
+        </select>
+
+        <label for="price">Price</label>
+        <input type="text" id="price" name="price" readonly required>
+
+        <label for="customer-name">Customer Name</label>
+        <select id="customer-name" name="customer-name" required>
+            <option value="">Select Customer</option>
+            <!-- Dynamically populate this with customers -->
+        </select>
+
+        <label for="quantity">Quantity</label>
+        <input type="number" id="quantity" name="quantity" required>
+
+        <label for="discount-price">Discount Price</label>
+        <input type="number" id="discount-price" name="discount-price">
+
+        <label for="remarks">Remarks</label>
+        <textarea id="remarks" name="remarks"></textarea>
+
+        <label for="total-amount">Total Amount</label>
+        <input type="text" id="total-amount" name="total-amount" readonly>
+
+        <button type="submit">Add Order</button>
+    </form>
+    <script src="js/order.js"></script>
+</body>
+</html>

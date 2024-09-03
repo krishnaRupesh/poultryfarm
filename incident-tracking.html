@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incident Tracking</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <h1>Incident Tracking</h1>
+
+    <h2>New Incident</h2>
+    <form id="new-incident-form">
+        <label for="division-name">Division Name</label>
+        <input type="text" id="division-name" name="division-name" required>
+
+        <label for="incident-type">Incident Type</label>
+        <select id="incident-type" name="incident-type" required>
+            <option value="hens">Hens</option>
+            <option value="electric">Electric</option>
+            <option value="machinery">Machinery</option>
+            <option value="others">Others</option>
+        </select>
+
+        <label for="summary">Summary</label>
+        <textarea id="summary" name="summary" maxlength="1000" required></textarea>
+
+        <button type="submit">Add Incident</button>
+    </form>
+
+    <h2>Old Incidents</h2> 
+	<form id="old-incident-form"> <label for="division-name-old">Division Name</label> <input type="text" id="division-name-old" name="division-name-old" required>
+	
+	<label for="incident-id">Incident ID</label>
+    <input type="text" id="incident-id" name="incident-id" required>
+
+    <label for="incident-date">Incident Date</label>
+    <input type="date" id="incident-date" name="incident-date" required>
+
+    <label for="incident-type-old">Incident Type</label>
+    <select id="incident-type-old" name="incident-type-old" required>
+        <option value="hens">Hens</option>
+        <option value="electric">Electric</option>
+        <option value="machinery">Machinery</option>
+        <option value="others">Others</option>
+    </select>
+
+    <label for="summary-old">Summary</label>
+    <textarea id="summary-old" name="summary-old" maxlength="1000" required></textarea>
+
+    <label for="amount-spent">Amount Spent</label>
+    <input type="number" id="amount-spent" name="amount-spent" required>
+
+    <button type="submit">Update Incident</button>
+</form>
+
+<script src="js/incident.js"></script>
+
+</body> 
+</html>
