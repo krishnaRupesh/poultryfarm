@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Incident</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <h1>Update Incident</h1>
+    <form id="update-incident-form">
+        <label for="incident-id">Incident ID</label>
+        <input type="text" id="incident-id" name="incident-id" readonly>
+
+        <label for="incident-date">Incident Date</label>
+        <input type="date" id="incident-date" name="incident-date" required>
+
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required>
+
+        <label for="incident-type">Incident Type</label>
+        <select id="incident-type" name="incident-type" required>
+            <option value="hens">Hens</option>
+            <option value="electric">Electric</option>
+            <option value="machinery">Machinery</option>
+            <option value="others">Others</option>
+        </select>
+
+        <label for="amount-spent">Amount Spent</label>
+        <input type="number" id="amount-spent" name="amount-spent" required>
+
+        <label for="summary">Summary</label>
+        <textarea id="summary" name="summary" maxlength="1000" required></textarea>
+
+        <button type="submit">Update Incident</button>
+    </form>
+
+    <script src="js/incident-update.js"></script>
+</body>
+</html>
