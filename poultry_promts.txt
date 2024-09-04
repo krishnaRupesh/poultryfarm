@@ -72,3 +72,16 @@ customer balance sheet details
 	make all payment rows light green and all order rows light orange.
 	
 	
+	
+===========================================================================
+
+provide the postgres database create queries for products, customers, orders,payments, incidents, customer balance summary. include audit columns like createdat,updatedat,createdby,updatedby,isdeleted.
+
+also create an audit tables for the above table. 
+also create triggers when any update or inset happen in source insert row in audit tables.
+
+in orders table include customer name and product name also.
+in payments table include customer name
+in customer balance table include customer name. and provide me the latest create tables and audit tables accordingly
+
+===========================================================================
