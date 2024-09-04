@@ -1,4 +1,5 @@
 from flask import Flask
+from flasgger import Swagger
 from config import Config
 from models import db
 from routes.products import products_bp
@@ -11,6 +12,9 @@ from routes.products import products_bp
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+# Initialize Swagger
+swagger = Swagger(app)
 
 # Register Blueprints
 app.register_blueprint(products_bp, url_prefix='/api/products')
