@@ -1,9 +1,14 @@
+from pathlib import Path
+
 from flasgger import Swagger
-from flask import Flask
+from flask import Flask, send_from_directory
 
 from .config import Config
 from .models import db
 from .routes.products import products_bp
+
+
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 
 def create_app(config_class=Config):
@@ -19,5 +24,13 @@ def create_app(config_class=Config):
     # app.register_blueprint(payments_bp, url_prefix="/api/payments")
     # app.register_blueprint(incidents_bp, url_prefix="/api/incidents")
     # app.register_blueprint(customer_balance_bp, url_prefix="/api/customer_balance")
+
+    @app.route("/")
+    def serve_dashboard():
+        return send_from_directory(FRONTEND_DIR, "index.html")
+
+    @app.route("/<path:filename>")
+    def serve_frontend_file(filename):
+        return send_from_directory(FRONTEND_DIR, filename)
 
     return app

@@ -27,7 +27,7 @@ http://localhost:5000
 Useful local URLs:
 
 ```text
-Frontend dashboard: frontend/index.html
+Frontend dashboard: http://localhost:5000/
 Swagger API docs:   http://localhost:5000/apidocs
 Products API:       http://localhost:5000/api/products/
 ```
