@@ -8,12 +8,13 @@
 </head>
 <body>
     <h1>Add New Order</h1>
+    <a class="back-link" href="../../index.html">Dashboard</a>
     <form id="order-form">
         <label for="order-date">Order Date</label>
-        <input type="date" id="order-date" name="order-date" value="<?= date('Y-m-d'); ?>" required>
+        <input type="date" id="order-date" name="order-date" required>
 
         <label for="product">Product</label>
-        <select id="product" name="product" onchange="updateProductPrice()" required>
+        <select id="product" name="product" required>
             <option value="">Select Product</option>
             <!-- Dynamically populate this with products -->
         </select>
@@ -28,10 +29,10 @@
         </select>
 
         <label for="quantity">Quantity</label>
-        <input type="number" id="quantity" name="quantity" required>
+        <input type="number" id="quantity" name="quantity" min="1" required>
 
         <label for="discount-price">Discount Price</label>
-        <input type="number" id="discount-price" name="discount-price">
+        <input type="number" id="discount-price" name="discount-price" step="0.01">
 
         <label for="remarks">Remarks</label>
         <textarea id="remarks" name="remarks"></textarea>
@@ -41,6 +42,7 @@
 
         <button type="submit">Add Order</button>
     </form>
+    <script src="../../js/api.js"></script>
     <script src="../../js/order.js"></script>
 </body>
 </html>

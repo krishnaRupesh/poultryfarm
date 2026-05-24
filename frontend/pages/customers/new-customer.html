@@ -8,6 +8,7 @@
 </head>
 <body>
     <h1>Add New Customer</h1>
+    <a class="back-link" href="../../index.html">Dashboard</a>
     <form id="customer-form">
         <label for="customer-name">Customer Name</label>
         <input type="text" id="customer-name" name="customer-name" required>
@@ -23,6 +24,21 @@
 
         <button type="submit">Add Customer</button>
     </form>
+    <section class="panel">
+        <h2>Customers</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Address</th>
+                </tr>
+            </thead>
+            <tbody id="customer-list"></tbody>
+        </table>
+    </section>
+    <script src="../../js/api.js"></script>
     <script src="../../js/customer.js"></script>
 </body>
 </html>

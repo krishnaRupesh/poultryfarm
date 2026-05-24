@@ -23,6 +23,10 @@ def create_app(config_class=Config):
     db.init_app(app)
     Swagger(app)
 
+    if app.config.get("AUTO_CREATE_TABLES"):
+        with app.app_context():
+            db.create_all()
+
     app.register_blueprint(products_bp, url_prefix="/api/products")
     app.register_blueprint(customers_bp, url_prefix="/api/customers")
     app.register_blueprint(orders_bp, url_prefix="/api/orders")

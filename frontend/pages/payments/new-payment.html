@@ -8,6 +8,7 @@
 </head>
 <body>
     <h1>Add New Payment</h1>
+    <a class="back-link" href="../../index.html">Dashboard</a>
     <form id="payment-form">
         <label for="customer-name">Customer Name</label>
         <select id="customer-name" name="customer-name" required>
@@ -16,10 +17,10 @@
         </select>
 
         <label for="payment-amount">Payment Amount</label>
-        <input type="number" id="payment-amount" name="payment-amount" required>
+        <input type="number" id="payment-amount" name="payment-amount" step="0.01" required>
 
         <label for="payment-date">Payment Date</label>
-        <input type="date" id="payment-date" name="payment-date" value="<?= date('Y-m-d'); ?>" required>
+        <input type="date" id="payment-date" name="payment-date" required>
 
         <label for="payment-mode">Payment Mode</label>
         <select id="payment-mode" name="payment-mode" required>
@@ -33,6 +34,7 @@
 
         <button type="submit">Add Payment</button>
     </form>
+    <script src="../../js/api.js"></script>
     <script src="../../js/payment.js"></script>
 </body>
 </html>

@@ -1,21 +1,71 @@
 /* Common Styles */
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: Arial, sans-serif;
-    margin: 20px;
-    padding: 0;
-    background-color: #f5f5f5;
+    margin: 0;
+    padding: 24px;
+    background-color: #f4f6f8;
+    color: #1f2933;
 }
 
 h1, h2 {
-    color: #333;
+    color: #1f2933;
+    margin-top: 0;
 }
 
-form {
+a {
+    color: #1f6feb;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    list-style: none;
+    padding: 0;
+}
+
+.dashboard-grid a,
+.back-link {
+    display: block;
+    background-color: #fff;
+    border: 1px solid #d9e2ec;
+    border-radius: 6px;
+    padding: 14px;
+    text-decoration: none;
+    color: #102a43;
+}
+
+.dashboard-grid a:hover,
+.back-link:hover {
+    border-color: #1f6feb;
+}
+
+form,
+.panel {
     margin-bottom: 20px;
     background-color: #fff;
-    padding: 15px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 16px;
+    border: 1px solid #d9e2ec;
+    border-radius: 6px;
 }
 
 label {
@@ -41,6 +91,35 @@ button {
     cursor: pointer;
 }
 
+button.secondary {
+    background-color: #52606d;
+}
+
+button.secondary:hover {
+    background-color: #3e4c59;
+}
+
+.status {
+    display: none;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border-radius: 6px;
+}
+
+.status.success {
+    display: block;
+    background-color: #e3fcec;
+    color: #0f5132;
+    border: 1px solid #8eedb1;
+}
+
+.status.error {
+    display: block;
+    background-color: #ffe3e3;
+    color: #842029;
+    border: 1px solid #ffb3b3;
+}
+
 button:hover {
     background-color: #218838;
 }
@@ -49,6 +128,10 @@ table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
+}
+
+tbody tr:hover {
+    background-color: #eef4ff;
 }
 
 table, th, td {

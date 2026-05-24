@@ -8,6 +8,7 @@
 </head>
 <body>
     <h1>Update Incident</h1>
+    <a class="back-link" href="incident-tracking.html">Incident Tracking</a>
     <form id="update-incident-form">
         <label for="incident-id">Incident ID</label>
         <input type="text" id="incident-id" name="incident-id" readonly>
@@ -27,7 +28,7 @@
         </select>
 
         <label for="amount-spent">Amount Spent</label>
-        <input type="number" id="amount-spent" name="amount-spent" required>
+        <input type="number" id="amount-spent" name="amount-spent" step="0.01" required>
 
         <label for="summary">Summary</label>
         <textarea id="summary" name="summary" maxlength="1000" required></textarea>
@@ -35,6 +36,7 @@
         <button type="submit">Update Incident</button>
     </form>
 
+    <script src="../../js/api.js"></script>
     <script src="../../js/incident-update.js"></script>
 </body>
 </html>

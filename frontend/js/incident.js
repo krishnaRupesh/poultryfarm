@@ -1,11 +1,22 @@
-document.getElementById('new-incident-form').addEventListener('submit', function(event) {
+document.getElementById('new-incident-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    alert('New incident added successfully!');
-    // Add logic to save new incident to database
-});
+    clearStatus();
+    const data = formPayload(event.currentTarget);
 
-document.getElementById('old-incident-form').addEventListener('submit', function(event) {
-    event.preventDefault();
-    alert('Old incident updated successfully!');
-    // Add logic to update old incident in database
+    try {
+        await apiRequest('/api/incidents/', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: data.name,
+                incident_type: data['incident-type'],
+                incident_date: data['incident-date'],
+                summary: data.summary || null,
+                amount_spent: data['amount-spent'],
+                created_by: DEFAULT_USER
+            })
+        });
+        setStatus('Incident saved successfully.');
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
 });

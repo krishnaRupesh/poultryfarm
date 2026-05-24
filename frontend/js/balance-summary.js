@@ -1,40 +1,37 @@
-// Function to fetch and display customer balance summary
-function loadBalanceSummary() {
-    const data = getCustomerBalanceSummary();
+async function loadBalanceSummary() {
+    clearStatus();
     const tbody = document.getElementById('balance-summary');
-    tbody.innerHTML = ''; // Clear previous summary
 
-    data.forEach(item => {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${item.customerName}</td><td>${item.remainingBalance}</td>`;
-        tbody.appendChild(row);
-    });
+    try {
+        const data = await apiRequest('/api/customer-balances/summary');
+        tbody.innerHTML = data.map((item) => `
+            <tr>
+                <td><a href="customer-balance-sheet-details.html?customer_id=${item.customer_id}">${item.customer_name || ''}</a></td>
+                <td>${money(item.remaining_balance)}</td>
+            </tr>
+        `).join('');
 
-    // Update last updated time
-    document.getElementById('last-updated-time').textContent = getLastUpdatedTime();
+        const lastUpdated = data[0]?.last_updated || null;
+        document.getElementById('last-updated-time').textContent = lastUpdated
+            ? new Date(lastUpdated).toLocaleString()
+            : '--:--';
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
 }
 
-// Function to simulate fetching data from backend
-function getCustomerBalanceSummary() {
-    // Placeholder for actual logic to fetch customer balance summary from the backend
-    return [
-        { customerName: 'John Doe', remainingBalance: '150' },
-        { customerName: 'Jane Smith', remainingBalance: '100' },
-        { customerName: 'Acme Corp', remainingBalance: '250' }
-    ].sort((a, b) => b.remainingBalance - a.remainingBalance); // Sort by remaining balance descending
+async function refreshData() {
+    clearStatus();
+    try {
+        await apiRequest('/api/customer-balances/refresh', {
+            method: 'POST',
+            body: JSON.stringify({ updated_by: DEFAULT_USER })
+        });
+        setStatus('Balance summary refreshed.');
+        await loadBalanceSummary();
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
 }
 
-// Function to simulate fetching the last updated time
-function getLastUpdatedTime() {
-    // Placeholder for actual logic to fetch last updated time from the backend
-    return new Date().toLocaleTimeString();
-}
-
-// Function to handle the refresh button click
-function refreshData() {
-    alert('Data refreshed!');
-    loadBalanceSummary();
-}
-
-// Initial load of balance summary
-window.onload = loadBalanceSummary;
+document.addEventListener('DOMContentLoaded', loadBalanceSummary);

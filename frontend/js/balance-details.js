@@ -1,40 +1,51 @@
-function loadBalanceDetails() {
-    const customerName = document.getElementById('customer-name').value;
-    if (customerName) {
-        // Fetch remaining balance and details for the customer
-        const remainingBalance = getRemainingBalance(customerName);
-        document.getElementById('remaining-balance').value = remainingBalance;
+async function populateBalanceCustomers() {
+    const select = document.getElementById('customer-name');
+    const customers = await apiRequest('/api/customers/');
+    populateSelect(
+        select,
+        customers,
+        (customer) => customer.customer_id,
+        (customer) => customer.customer_name,
+        'Select Customer'
+    );
+}
 
-        const details = getBalanceDetails(customerName);
+async function loadBalanceDetails(customerId = null) {
+    clearStatus();
+    const selectedCustomer = customerId || document.getElementById('customer-name').value;
+    if (!selectedCustomer) {
+        setStatus('Please select a customer.', 'error');
+        return;
+    }
+
+    try {
+        const details = await apiRequest(`/api/customer-balances/${selectedCustomer}/details`);
+        document.getElementById('customer-name').value = details.customer_id;
+        document.getElementById('remaining-balance').value = money(details.remaining_balance);
+
         const tbody = document.getElementById('balance-details');
-        tbody.innerHTML = ''; // Clear previous details
-
-        details.forEach(detail => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
+        tbody.innerHTML = details.details.map((detail) => `
+            <tr class="${detail.type === 'payment' ? 'payment-row' : 'order-row'}">
                 <td>${detail.date}</td>
                 <td>${detail.id}</td>
-                <td>${detail.quantity}</td>
-                <td>${detail.amount}</td>
+                <td>${detail.quantity || ''}</td>
+                <td>${money(detail.amount)}</td>
                 <td>${detail.type}</td>
-            `;
-            row.className = detail.type === 'payment' ? 'payment-row' : 'order-row';
-            tbody.appendChild(row);
-        });
-    } else {
-        alert('Please select a customer.');
+            </tr>
+        `).join('');
+    } catch (error) {
+        setStatus(error.message, 'error');
     }
 }
 
-function getRemainingBalance(customerName) {
-    // Placeholder for actual logic to fetch remaining balance from the database
-    return 500; // Example remaining balance
-}
-
-function getBalanceDetails(customerName) {
-    // Placeholder for actual logic to fetch balance details from the database
-    return [
-        { date: '2024-09-01', id: 'ORD123', quantity: '10', amount: '100', type: 'order' },
-        { date: '2024-09-02', id: 'PAY456', quantity: '', amount: '-50', type: 'payment' }
-    ]; // Example details
-}
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await populateBalanceCustomers();
+        const customerId = new URLSearchParams(window.location.search).get('customer_id');
+        if (customerId) {
+            await loadBalanceDetails(customerId);
+        }
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
+});
