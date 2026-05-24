@@ -32,18 +32,86 @@ def _calculate_total(price, discount_price, quantity):
 
 @orders_bp.route("/", methods=["GET"])
 def get_orders():
+    """
+    List orders
+    ---
+    tags:
+      - Orders
+    parameters:
+      - in: query
+        name: include_deleted
+        type: boolean
+        required: false
+    responses:
+      200:
+        description: Order list
+    """
     orders = active_query(Order).order_by(Order.date.desc(), Order.order_id.desc()).all()
     return jsonify([order.as_dict() for order in orders])
 
 
 @orders_bp.route("/<int:order_id>", methods=["GET"])
 def get_order(order_id):
+    """
+    Get an order
+    ---
+    tags:
+      - Orders
+    parameters:
+      - in: path
+        name: order_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Order details
+      404:
+        description: Order not found
+    """
     order = Order.query.get_or_404(order_id)
     return jsonify(order.as_dict())
 
 
 @orders_bp.route("/", methods=["POST"])
 def add_order():
+    """
+    Create an order
+    ---
+    tags:
+      - Orders
+    parameters:
+      - in: body
+        name: order
+        required: true
+        schema:
+          type: object
+          required:
+            - customer_id
+            - product_id
+            - quantity
+            - created_by
+          properties:
+            customer_id:
+              type: integer
+            product_id:
+              type: integer
+            date:
+              type: string
+              format: date
+            quantity:
+              type: integer
+            discount_price:
+              type: number
+            remarks:
+              type: string
+            created_by:
+              type: string
+    responses:
+      201:
+        description: Order created
+      404:
+        description: Customer or product price not found
+    """
     data, error = request_data()
     if error:
         return error
@@ -100,6 +168,40 @@ def add_order():
 
 @orders_bp.route("/<int:order_id>", methods=["PUT"])
 def update_order(order_id):
+    """
+    Update an order
+    ---
+    tags:
+      - Orders
+    parameters:
+      - in: path
+        name: order_id
+        type: integer
+        required: true
+      - in: body
+        name: order
+        schema:
+          type: object
+          properties:
+            customer_id:
+              type: integer
+            product_id:
+              type: integer
+            date:
+              type: string
+              format: date
+            quantity:
+              type: integer
+            discount_price:
+              type: number
+            remarks:
+              type: string
+            updated_by:
+              type: string
+    responses:
+      200:
+        description: Order updated
+    """
     order = Order.query.get_or_404(order_id)
     data, error = request_data()
     if error:
@@ -151,6 +253,20 @@ def update_order(order_id):
 
 @orders_bp.route("/<int:order_id>", methods=["DELETE"])
 def delete_order(order_id):
+    """
+    Soft delete an order
+    ---
+    tags:
+      - Orders
+    parameters:
+      - in: path
+        name: order_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Order deleted
+    """
     order = Order.query.get_or_404(order_id)
     order.is_deleted = True
     mark_updated(order)

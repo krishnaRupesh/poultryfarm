@@ -19,18 +19,81 @@ payments_bp = Blueprint("payments", __name__)
 
 @payments_bp.route("/", methods=["GET"])
 def get_payments():
+    """
+    List payments
+    ---
+    tags:
+      - Payments
+    parameters:
+      - in: query
+        name: include_deleted
+        type: boolean
+        required: false
+    responses:
+      200:
+        description: Payment list
+    """
     payments = active_query(Payment).order_by(Payment.payment_date.desc(), Payment.payment_id.desc()).all()
     return jsonify([payment.as_dict() for payment in payments])
 
 
 @payments_bp.route("/<int:payment_id>", methods=["GET"])
 def get_payment(payment_id):
+    """
+    Get a payment
+    ---
+    tags:
+      - Payments
+    parameters:
+      - in: path
+        name: payment_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Payment details
+      404:
+        description: Payment not found
+    """
     payment = Payment.query.get_or_404(payment_id)
     return jsonify(payment.as_dict())
 
 
 @payments_bp.route("/", methods=["POST"])
 def add_payment():
+    """
+    Create a payment
+    ---
+    tags:
+      - Payments
+    parameters:
+      - in: body
+        name: payment
+        required: true
+        schema:
+          type: object
+          required:
+            - customer_id
+            - payment_amount
+            - created_by
+          properties:
+            customer_id:
+              type: integer
+            payment_amount:
+              type: number
+            payment_date:
+              type: string
+              format: date
+            payment_mode:
+              type: string
+            remarks:
+              type: string
+            created_by:
+              type: string
+    responses:
+      201:
+        description: Payment created
+    """
     data, error = request_data()
     if error:
         return error
@@ -70,6 +133,38 @@ def add_payment():
 
 @payments_bp.route("/<int:payment_id>", methods=["PUT"])
 def update_payment(payment_id):
+    """
+    Update a payment
+    ---
+    tags:
+      - Payments
+    parameters:
+      - in: path
+        name: payment_id
+        type: integer
+        required: true
+      - in: body
+        name: payment
+        schema:
+          type: object
+          properties:
+            customer_id:
+              type: integer
+            payment_amount:
+              type: number
+            payment_date:
+              type: string
+              format: date
+            payment_mode:
+              type: string
+            remarks:
+              type: string
+            updated_by:
+              type: string
+    responses:
+      200:
+        description: Payment updated
+    """
     payment = Payment.query.get_or_404(payment_id)
     data, error = request_data()
     if error:
@@ -105,6 +200,20 @@ def update_payment(payment_id):
 
 @payments_bp.route("/<int:payment_id>", methods=["DELETE"])
 def delete_payment(payment_id):
+    """
+    Soft delete a payment
+    ---
+    tags:
+      - Payments
+    parameters:
+      - in: path
+        name: payment_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Payment deleted
+    """
     payment = Payment.query.get_or_404(payment_id)
     payment.is_deleted = True
     mark_updated(payment)

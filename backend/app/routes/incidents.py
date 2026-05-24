@@ -26,6 +26,20 @@ def _validate_incident_type(value):
 
 @incidents_bp.route("/", methods=["GET"])
 def get_incidents():
+    """
+    List incidents
+    ---
+    tags:
+      - Incidents
+    parameters:
+      - in: query
+        name: include_deleted
+        type: boolean
+        required: false
+    responses:
+      200:
+        description: Incident list ordered by incident date descending
+    """
     incidents = active_query(Incident).order_by(
         Incident.incident_date.desc(),
         Incident.incident_id.desc(),
@@ -35,12 +49,64 @@ def get_incidents():
 
 @incidents_bp.route("/<int:incident_id>", methods=["GET"])
 def get_incident(incident_id):
+    """
+    Get an incident
+    ---
+    tags:
+      - Incidents
+    parameters:
+      - in: path
+        name: incident_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Incident details
+      404:
+        description: Incident not found
+    """
     incident = Incident.query.get_or_404(incident_id)
     return jsonify(incident.as_dict())
 
 
 @incidents_bp.route("/", methods=["POST"])
 def add_incident():
+    """
+    Create an incident
+    ---
+    tags:
+      - Incidents
+    parameters:
+      - in: body
+        name: incident
+        required: true
+        schema:
+          type: object
+          required:
+            - name
+            - incident_type
+            - incident_date
+            - amount_spent
+            - created_by
+          properties:
+            name:
+              type: string
+            incident_type:
+              type: string
+              enum: [hens, electric, machinery, others]
+            incident_date:
+              type: string
+              format: date
+            summary:
+              type: string
+            amount_spent:
+              type: number
+            created_by:
+              type: string
+    responses:
+      201:
+        description: Incident created
+    """
     data, error = request_data()
     if error:
         return error
@@ -76,6 +142,39 @@ def add_incident():
 
 @incidents_bp.route("/<int:incident_id>", methods=["PUT"])
 def update_incident(incident_id):
+    """
+    Update an incident
+    ---
+    tags:
+      - Incidents
+    parameters:
+      - in: path
+        name: incident_id
+        type: integer
+        required: true
+      - in: body
+        name: incident
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+            incident_type:
+              type: string
+              enum: [hens, electric, machinery, others]
+            incident_date:
+              type: string
+              format: date
+            summary:
+              type: string
+            amount_spent:
+              type: number
+            updated_by:
+              type: string
+    responses:
+      200:
+        description: Incident updated
+    """
     incident = Incident.query.get_or_404(incident_id)
     data, error = request_data()
     if error:
@@ -107,6 +206,20 @@ def update_incident(incident_id):
 
 @incidents_bp.route("/<int:incident_id>", methods=["DELETE"])
 def delete_incident(incident_id):
+    """
+    Soft delete an incident
+    ---
+    tags:
+      - Incidents
+    parameters:
+      - in: path
+        name: incident_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Incident deleted
+    """
     incident = Incident.query.get_or_404(incident_id)
     incident.is_deleted = True
     mark_updated(incident)

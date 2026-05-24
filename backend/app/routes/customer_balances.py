@@ -43,6 +43,15 @@ def _refresh_customer_balance(customer, updated_by):
 
 @customer_balances_bp.route("/summary", methods=["GET"])
 def get_balance_summary():
+    """
+    List customer balance summaries
+    ---
+    tags:
+      - Customer Balances
+    responses:
+      200:
+        description: Customer balances ordered by remaining balance descending
+    """
     summaries = CustomerBalanceSummary.query.filter_by(is_deleted=False).order_by(
         CustomerBalanceSummary.remaining_balance.desc()
     ).all()
@@ -51,6 +60,24 @@ def get_balance_summary():
 
 @customer_balances_bp.route("/refresh", methods=["POST"])
 def refresh_balance_summary():
+    """
+    Refresh customer balance summaries
+    ---
+    tags:
+      - Customer Balances
+    parameters:
+      - in: body
+        name: refresh
+        required: false
+        schema:
+          type: object
+          properties:
+            updated_by:
+              type: string
+    responses:
+      200:
+        description: Refreshed customer balance summaries
+    """
     data, _ = request_data()
     updated_by = (data or {}).get("updated_by", "system")
     customers = Customer.query.filter_by(is_deleted=False).all()
@@ -62,11 +89,47 @@ def refresh_balance_summary():
 
 @customer_balances_bp.route("/<int:customer_id>/details", methods=["GET"])
 def get_balance_details(customer_id):
+    """
+    Get customer balance details by customer ID
+    ---
+    tags:
+      - Customer Balances
+    parameters:
+      - in: path
+        name: customer_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Customer balance details with order and payment rows
+      404:
+        description: Customer not found
+    """
     return _balance_details_response(customer_id)
 
 
 @customer_balances_bp.route("/details", methods=["GET"])
 def get_balance_details_by_query():
+    """
+    Get customer balance details by query
+    ---
+    tags:
+      - Customer Balances
+    parameters:
+      - in: query
+        name: customer_id
+        type: integer
+        required: false
+      - in: query
+        name: customer_name
+        type: string
+        required: false
+    responses:
+      200:
+        description: Customer balance details with order and payment rows
+      400:
+        description: customer_id or customer_name is required
+    """
     customer_id = request.args.get("customer_id")
     customer_name = request.args.get("customer_name")
 
