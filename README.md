@@ -30,9 +30,14 @@ Useful local URLs:
 Frontend dashboard: http://localhost:5000/
 Swagger API docs:   http://localhost:5000/apidocs
 Products API:       http://localhost:5000/api/products/
+Customers API:      http://localhost:5000/api/customers/
+Orders API:         http://localhost:5000/api/orders/
+Payments API:       http://localhost:5000/api/payments/
+Incidents API:      http://localhost:5000/api/incidents/
+Balance summary:    http://localhost:5000/api/customer-balances/summary
 ```
 
-The current API implementation is started with the products blueprint at `/api/products`.
+The backend exposes product, customer, order, payment, incident, and customer balance APIs under `/api`.
 
 ## Database
 

@@ -5,6 +5,11 @@ from flask import Flask, send_from_directory
 
 from .config import Config
 from .models import db
+from .routes.customer_balances import customer_balances_bp
+from .routes.customers import customers_bp
+from .routes.incidents import incidents_bp
+from .routes.orders import orders_bp
+from .routes.payments import payments_bp
 from .routes.products import products_bp
 
 
@@ -19,11 +24,11 @@ def create_app(config_class=Config):
     Swagger(app)
 
     app.register_blueprint(products_bp, url_prefix="/api/products")
-    # app.register_blueprint(customers_bp, url_prefix="/api/customers")
-    # app.register_blueprint(orders_bp, url_prefix="/api/orders")
-    # app.register_blueprint(payments_bp, url_prefix="/api/payments")
-    # app.register_blueprint(incidents_bp, url_prefix="/api/incidents")
-    # app.register_blueprint(customer_balance_bp, url_prefix="/api/customer_balance")
+    app.register_blueprint(customers_bp, url_prefix="/api/customers")
+    app.register_blueprint(orders_bp, url_prefix="/api/orders")
+    app.register_blueprint(payments_bp, url_prefix="/api/payments")
+    app.register_blueprint(incidents_bp, url_prefix="/api/incidents")
+    app.register_blueprint(customer_balances_bp, url_prefix="/api/customer-balances")
 
     @app.route("/")
     def serve_dashboard():
