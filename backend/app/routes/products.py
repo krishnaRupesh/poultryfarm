@@ -80,10 +80,14 @@ def add_product():
               format: date
     """
     data = request.json
+    date_val = data['date']
+    if isinstance(date_val, str):
+        date_val = datetime.strptime(date_val, '%Y-%m-%d').date()
+
     new_product = Product(
         product_name=data['product_name'],
         price=data['price'],
-        date=data['date'],
+        date=date_val,
         created_by=data['created_by']
     )
     db.session.add(new_product)
@@ -138,7 +142,11 @@ def update_product(id):
     data = request.json
     product.product_name = data.get('product_name', product.product_name)
     product.price = data.get('price', product.price)
-    product.date = data.get('date', product.date)
+    if 'date' in data:
+        date_val = data['date']
+        if isinstance(date_val, str):
+            date_val = datetime.strptime(date_val, '%Y-%m-%d').date()
+        product.date = date_val
     product.updated_by = data['updated_by']
     product.updated_at = datetime.utcnow()
     db.session.commit()
