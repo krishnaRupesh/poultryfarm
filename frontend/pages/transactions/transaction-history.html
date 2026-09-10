@@ -8,9 +8,21 @@
 </head>
 <body>
     <h1>Transaction History</h1>
-    <ul id="transaction-list"></ul>
-    <button onclick="loadMoreTransactions()">Load More</button>
+    <a class="back-link" href="../../index.html">Dashboard</a>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Customer</th>
+                <th>Reference</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody id="transaction-list"></tbody>
+    </table>
 
+    <script src="../../js/api.js"></script>
     <script src="../../js/app.js"></script>
 </body>
 </html>

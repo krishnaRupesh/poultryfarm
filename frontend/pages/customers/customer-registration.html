@@ -8,6 +8,7 @@
 </head>
 <body>
     <h1>Customer Registration</h1>
+    <a class="back-link" href="../../index.html">Dashboard</a>
     <form id="customer-form">
         <label for="customer-name">Customer Name</label>
         <input type="text" id="customer-name" name="customer-name" required>
@@ -21,9 +22,10 @@
         <label for="customer-address">Address</label>
         <textarea id="customer-address" name="customer-address" required></textarea>
 
-        <button type="button" onclick="registerCustomer()">Register Customer</button>
+        <button type="submit">Register Customer</button>
     </form>
 
-    <script src="../../js/app.js"></script>
+    <script src="../../js/api.js"></script>
+    <script src="../../js/customer.js"></script>
 </body>
 </html>

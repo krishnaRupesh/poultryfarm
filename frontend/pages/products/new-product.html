@@ -8,6 +8,7 @@
 </head>
 <body>
     <h1>Add New Product</h1>
+    <a class="back-link" href="../../index.html">Dashboard</a>
     <form id="product-form">
         <label for="product-name">Product Name</label>
         <input type="text" id="product-name" name="product-name" required>
@@ -20,6 +21,20 @@
 
         <button type="submit">Add Product</button>
     </form>
+    <section class="panel">
+        <h2>Current Products / Rates</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="product-list"></tbody>
+        </table>
+    </section>
+    <script src="../../js/api.js"></script>
     <script src="../../js/product.js"></script>
 </body>
 </html>
