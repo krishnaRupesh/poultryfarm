@@ -11,6 +11,9 @@ from .routes.incidents import incidents_bp
 from .routes.orders import orders_bp
 from .routes.payments import payments_bp
 from .routes.products import products_bp
+from .routes.feed_inventory import feed_inventory_bp
+from .routes.daily_operations import daily_operations_bp
+from .routes.cost_analysis import cost_analysis_bp
 
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
@@ -33,6 +36,9 @@ def create_app(config_class=Config):
     app.register_blueprint(payments_bp, url_prefix="/api/payments")
     app.register_blueprint(incidents_bp, url_prefix="/api/incidents")
     app.register_blueprint(customer_balances_bp, url_prefix="/api/customer-balances")
+    app.register_blueprint(feed_inventory_bp, url_prefix="/api/feed")
+    app.register_blueprint(daily_operations_bp, url_prefix="/api/daily")
+    app.register_blueprint(cost_analysis_bp, url_prefix="/api/analysis")
 
     @app.route("/")
     def serve_dashboard():

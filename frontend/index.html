@@ -3,26 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Poultry Farm Management & Finance</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div class="page-header">
-        <h1>Poultry Farm Finance</h1>
-        <a class="back-link" href="apidocs">API Docs</a>
+        <div>
+            <h1>Poultry Farm Management & Finance</h1>
+            <p style="margin: 4px 0 0 0; color: #627d98;">Feed inventory, daily consumption tracking, egg production, and cost & profitability analysis.</p>
+        </div>
+        <a class="back-link" href="apidocs">API Docs (Swagger)</a>
     </div>
+
+    <!-- Feed Inventory & Egg Cost Analysis Section -->
+    <h2 style="font-size: 1.25rem; color: #102a43; margin-top: 18px; margin-bottom: 12px; border-bottom: 2px solid #1f6feb; padding-bottom: 6px;">
+        🌾 Feed Inventory & Cost-per-Egg Analysis
+    </h2>
+    <nav style="margin-bottom: 24px;">
+        <ul class="dashboard-grid">
+            <li>
+                <a href="pages/inventory/feed-inventory.html" style="border-left: 4px solid #1f6feb;">
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">📦 Feed Inventory</div>
+                    <div style="font-size: 0.85rem; color: #627d98;">Add, update, delete feed ingredients, monitor stock (MT & kg), and record purchase costs.</div>
+                </a>
+            </li>
+            <li>
+                <a href="pages/inventory/daily-feed-production.html" style="border-left: 4px solid #f59e0b;">
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">🌽 Daily Feeding & Egg Ops</div>
+                    <div style="font-size: 0.85rem; color: #627d98;">Log active flock, daily food consumed (MT/kg), eggs produced, and actual eggs sold.</div>
+                </a>
+            </li>
+            <li>
+                <a href="pages/inventory/daily-cost-analysis.html" style="border-left: 4px solid #10b981;">
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">📊 Daily Cost & Profitability Analysis</div>
+                    <div style="font-size: 0.85rem; color: #627d98;">Cost per bird, cost to generate 1 egg, egg selling price vs cost, and realized gross profit.</div>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- General Finance & Operations Section -->
+    <h2 style="font-size: 1.25rem; color: #102a43; margin-bottom: 12px; border-bottom: 1px solid #d9e2ec; padding-bottom: 6px;">
+        💼 Sales, Customers & Financial Operations
+    </h2>
     <nav>
         <ul class="dashboard-grid">
             <li><a href="pages/products/new-product.html">Add Product / Rate</a></li>
             <li><a href="pages/customers/new-customer.html">Add Customer</a></li>
-            <li><a href="pages/orders/new-order.html">Add Order</a></li>
+            <li><a href="pages/orders/new-order.html">Add Order (Sales)</a></li>
             <li><a href="pages/payments/new-payment.html">Add Payment</a></li>
             <li><a href="pages/incidents/new-incident.html">Create Incident</a></li>
             <li><a href="pages/incidents/incident-tracking.html">Incident Tracking</a></li>
-            <li><a href="pages/balances/customer-balance-sheet-summary.html">Balance Summary</a></li>
-            <li><a href="pages/balances/customer-balance-sheet-details.html">Balance Details</a></li>
+            <li><a href="pages/balances/customer-balance-sheet-summary.html">Customer Balance Summary</a></li>
+            <li><a href="pages/balances/customer-balance-sheet-details.html">Customer Balance Details</a></li>
             <li><a href="pages/transactions/transaction-history.html">Transaction History</a></li>
-            <li><a href="pages/rates/daily-egg-rates.html">Daily Egg Rate</a></li>
+            <li><a href="pages/rates/daily-egg-rates.html">Daily Egg Rates</a></li>
             <li><a href="pages/rates/egg-rate-history.html">Egg Rate History</a></li>
         </ul>
     </nav>

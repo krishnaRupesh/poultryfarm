@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poultry Feed Inventory Management</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="page-header">
+        <div>
+            <h1>Feed Inventory Management</h1>
+            <p style="margin: 4px 0 0 0; color: #627d98;">Manage poultry feed ingredients, track stock levels (MT & kg), log purchases, and maintain weighted costs.</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a class="back-link" href="daily-feed-production.html">Daily Operations</a>
+            <a class="back-link" href="daily-cost-analysis.html">Cost Analysis</a>
+            <a class="back-link" href="../../index.html">Dashboard</a>
+        </div>
+    </div>
+
+    <div id="status-message" class="status"></div>
+
+    <!-- Inventory KPIs -->
+    <div class="kpi-grid">
+        <div class="kpi-card highlight">
+            <div class="kpi-title">Total Feed Stock</div>
+            <div class="kpi-value" id="kpi-total-stock">0.00 MT</div>
+            <div class="kpi-sub" id="kpi-total-stock-kg">0 kg total</div>
+        </div>
+        <div class="kpi-card success">
+            <div class="kpi-title">Inventory Valuation</div>
+            <div class="kpi-value" id="kpi-total-valuation">$0.00</div>
+            <div class="kpi-sub">Weighted cost basis</div>
+        </div>
+        <div class="kpi-card info">
+            <div class="kpi-title">Active Ingredients</div>
+            <div class="kpi-value" id="kpi-item-count">0</div>
+            <div class="kpi-sub">Feed items tracked</div>
+        </div>
+        <div class="kpi-card warning">
+            <div class="kpi-title">Low Stock Items</div>
+            <div class="kpi-value" id="kpi-low-stock">0</div>
+            <div class="kpi-sub">At or below reorder level</div>
+        </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('stock-tab')">📦 Current Stock & Ingredients</button>
+        <button class="tab-btn" onclick="switchTab('purchase-tab')">➕ Record Feed Purchase</button>
+        <button class="tab-btn" onclick="switchTab('history-tab')">📜 Purchase History</button>
+    </div>
+
+    <!-- TAB 1: Current Stock & Ingredients -->
+    <div id="stock-tab" class="tab-content active">
+        <div class="panel" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="inventory-search" placeholder="Search ingredient..." style="margin-bottom: 0; width: 220px;" oninput="filterInventoryTable()">
+                <select id="category-filter" style="margin-bottom: 0; width: 180px;" onchange="filterInventoryTable()">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div>
+                <button type="button" onclick="openAddModal()">+ Add New Feed Ingredient</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2 style="font-size: 1.2rem; margin-bottom: 12px;">Inventory Stock List</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ingredient Name</th>
+                            <th>Category</th>
+                            <th>Current Stock (MT)</th>
+                            <th>Stock (kg)</th>
+                            <th>Avg Cost / kg</th>
+                            <th>Avg Cost / MT</th>
+                            <th>Valuation</th>
+                            <th>Status</th>
+                            <th style="width: 170px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table-body">
+                        <tr><td colspan="9" style="text-align: center;">Loading inventory...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Record Feed Purchase -->
+    <div id="purchase-tab" class="tab-content">
+        <div class="panel" style="max-width: 760px; margin: 0 auto;">
+            <h2>Record Feed Purchase / Stock In</h2>
+            <p style="color: #627d98; font-size: 0.9rem;">Adding a purchase increases inventory stock and automatically updates the Weighted Average Cost per kg.</p>
+            <form id="purchase-form" onsubmit="handleSavePurchase(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="purchase-item-id">Feed Ingredient *</label>
+                        <select id="purchase-item-id" name="item_id" required>
+                            <option value="">Select ingredient...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="purchase-date">Purchase Date *</label>
+                        <input type="date" id="purchase-date" name="purchase_date" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="purchase-quantity">Quantity *</label>
+                        <input type="number" step="0.001" id="purchase-quantity" name="quantity" required placeholder="e.g. 5" oninput="updatePurchaseCostPreview()">
+                    </div>
+                    <div class="form-group">
+                        <label for="purchase-unit">Unit *</label>
+                        <select id="purchase-unit" name="unit" onchange="updatePurchaseCostPreview()">
+                            <option value="MT">Metric Tons (MT) [1 MT = 1,000 kg]</option>
+                            <option value="kg">Kilograms (kg)</option>
+                            <option value="bags">Bags (50 kg)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="purchase-total-cost">Total Purchase Cost ($) *</label>
+                        <input type="number" step="0.01" id="purchase-total-cost" name="total_cost" required placeholder="e.g. 1400" oninput="updatePurchaseCostPreview()">
+                    </div>
+                </div>
+
+                <!-- Live Cost Preview -->
+                <div id="purchase-cost-preview" style="background: #f0f4f8; border: 1px solid #d9e2ec; border-radius: 6px; padding: 12px; margin-bottom: 16px; display: none;">
+                    <strong>Cost Preview:</strong>
+                    <span id="preview-kg-qty" style="margin-left: 12px; color: #102a43;"></span> |
+                    <span id="preview-cost-kg" style="margin-left: 8px; color: #0b69a3; font-weight: bold;"></span> |
+                    <span id="preview-cost-mt" style="margin-left: 8px; color: #155724; font-weight: bold;"></span>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="purchase-vendor">Vendor / Supplier</label>
+                        <input type="text" id="purchase-vendor" name="vendor_name" placeholder="e.g. Agro Grains Corp">
+                    </div>
+                    <div class="form-group">
+                        <label for="purchase-invoice">Invoice / Bill Reference</label>
+                        <input type="text" id="purchase-invoice" name="invoice_no" placeholder="e.g. INV-90412">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="purchase-remarks">Remarks / Delivery Notes</label>
+                    <textarea id="purchase-remarks" name="remarks" rows="2" placeholder="Optional notes..."></textarea>
+                </div>
+
+                <div style="margin-top: 14px; display: flex; gap: 10px;">
+                    <button type="submit">Save Purchase & Update Stock</button>
+                    <button type="button" class="secondary" onclick="document.getElementById('purchase-form').reset(); clearStatus();">Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TAB 3: Purchase History -->
+    <div id="history-tab" class="tab-content">
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                <h2 style="font-size: 1.2rem; margin: 0;">Procurement & Purchase History</h2>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <label style="margin: 0; font-size: 0.85rem;">Item:</label>
+                    <select id="history-filter-item" style="margin: 0; width: 170px;" onchange="loadPurchases()">
+                        <option value="">All Items</option>
+                    </select>
+                    <button type="button" class="secondary btn-sm" onclick="loadPurchases()">Refresh</button>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Feed Ingredient</th>
+                            <th>Quantity (MT)</th>
+                            <th>Quantity (kg)</th>
+                            <th>Cost / kg</th>
+                            <th>Cost / MT</th>
+                            <th>Total Cost</th>
+                            <th>Vendor</th>
+                            <th>Invoice #</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="purchase-table-body">
+                        <tr><td colspan="10" style="text-align: center;">Loading purchases...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Add New Feed Item -->
+    <div id="add-modal" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Add New Feed Ingredient</h3>
+                <button type="button" class="modal-close" onclick="closeAddModal()">&times;</button>
+            </div>
+            <form id="add-item-form" onsubmit="handleCreateItem(event)">
+                <div class="form-group">
+                    <label for="add-name">Ingredient Name *</label>
+                    <input type="text" id="add-name" required placeholder="e.g. Yellow Corn, Soya Meal">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="add-category">Category</label>
+                        <select id="add-category">
+                            <option value="Grains">Grains (Energy)</option>
+                            <option value="Protein Meal">Protein Meal</option>
+                            <option value="Energy & Fiber">Energy & Fiber</option>
+                            <option value="Minerals">Minerals & Calcium</option>
+                            <option value="Supplements">Supplements & Premix</option>
+                            <option value="Medicines">Medicines & Additives</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-reorder">Reorder Alert Level (kg)</label>
+                        <input type="number" step="0.01" id="add-reorder" value="500.0" placeholder="500">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="add-initial-stock">Initial Stock (kg)</label>
+                        <input type="number" step="0.01" id="add-initial-stock" value="0.0" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-initial-cost">Initial Cost per kg ($)</label>
+                        <input type="number" step="0.0001" id="add-initial-cost" value="0.0" placeholder="0.00">
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                    <button type="button" class="secondary" onclick="closeAddModal()">Cancel</button>
+                    <button type="submit">Create Ingredient</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Edit Feed Item -->
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Edit Feed Ingredient</h3>
+                <button type="button" class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="edit-item-form" onsubmit="handleUpdateItem(event)">
+                <input type="hidden" id="edit-item-id">
+                <div class="form-group">
+                    <label for="edit-name">Ingredient Name *</label>
+                    <input type="text" id="edit-name" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-category">Category</label>
+                        <select id="edit-category">
+                            <option value="Grains">Grains (Energy)</option>
+                            <option value="Protein Meal">Protein Meal</option>
+                            <option value="Energy & Fiber">Energy & Fiber</option>
+                            <option value="Minerals">Minerals & Calcium</option>
+                            <option value="Supplements">Supplements & Premix</option>
+                            <option value="Medicines">Medicines & Additives</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-reorder">Reorder Alert Level (kg)</label>
+                        <input type="number" step="0.01" id="edit-reorder" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-stock">Current Stock (kg)</label>
+                        <input type="number" step="0.01" id="edit-stock" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-cost">Avg Cost per kg ($)</label>
+                        <input type="number" step="0.0001" id="edit-cost" required>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                    <button type="button" class="secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/feed-inventory.js"></script>
+</body>
+</html>

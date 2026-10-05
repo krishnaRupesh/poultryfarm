@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Cost-per-Bird & Cost-per-Egg Profitability Analysis</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="page-header">
+        <div>
+            <h1>Daily Cost & Egg Profitability Analysis</h1>
+            <p style="margin: 4px 0 0 0; color: #627d98;">Comprehensive cost-per-bird, cost-per-egg, realized profit margins, and egg inventory analysis.</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a class="back-link" href="daily-feed-production.html">Daily Operations</a>
+            <a class="back-link" href="feed-inventory.html">Feed Inventory</a>
+            <a class="back-link" href="../../index.html">Dashboard</a>
+        </div>
+    </div>
+
+    <div id="status-message" class="status"></div>
+
+    <!-- Date Filter Bar -->
+    <div class="panel" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <label for="analysis-date" style="margin: 0; font-size: 1rem; font-weight: 600;">Analysis Date:</label>
+            <input type="date" id="analysis-date" style="margin: 0; width: 170px;" onchange="loadDailyAnalysis()">
+            <button type="button" class="secondary btn-sm" onclick="setAnalysisDate(today())">Today</button>
+            <button type="button" class="secondary btn-sm" onclick="setAnalysisDate('2026-10-05')">Oct 05 (Mock Date)</button>
+        </div>
+        <div>
+            <span id="analysis-status-pill" style="padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; background: #e2e8f0; color: #486581;">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Executive KPI Grid (Flock, Feed, Egg Cost, Sales & Profit) -->
+    <div class="kpi-grid">
+        <!-- 1. Feed Cost per Bird -->
+        <div class="kpi-card highlight">
+            <div class="kpi-title">Feed Cost per Bird Today</div>
+            <div class="kpi-value" id="kpi-cost-per-bird" style="color: #0b69a3;">$0.0000</div>
+            <div class="kpi-sub" id="kpi-bird-sub">Based on 0 active birds</div>
+        </div>
+
+        <!-- 2. Cost to Generate 1 Egg -->
+        <div class="kpi-card warning">
+            <div class="kpi-title">Production Cost per Egg</div>
+            <div class="kpi-value" id="kpi-cost-per-egg" style="color: #b7791f;">$0.0000</div>
+            <div class="kpi-sub" id="kpi-egg-cost-sub">Total feed / Eggs produced</div>
+        </div>
+
+        <!-- 3. Egg Market Selling Price -->
+        <div class="kpi-card info">
+            <div class="kpi-title">Today's Egg Selling Price</div>
+            <div class="kpi-value" id="kpi-egg-price" style="color: #102a43;">$0.0000</div>
+            <div class="kpi-sub" id="kpi-price-sub">Market selling rate</div>
+        </div>
+
+        <!-- 4. Profit Margin per Egg Sold -->
+        <div class="kpi-card success">
+            <div class="kpi-title">Profit Margin per Egg</div>
+            <div class="kpi-value" id="kpi-egg-margin">$0.0000</div>
+            <div class="kpi-sub" id="kpi-margin-sub">Price - Cost per egg</div>
+        </div>
+    </div>
+
+    <div class="kpi-grid">
+        <!-- 5. Total Daily Feed Cost -->
+        <div class="kpi-card">
+            <div class="kpi-title">Total Feed Cost Spent</div>
+            <div class="kpi-value" id="kpi-total-feed-cost">$0.00</div>
+            <div class="kpi-sub" id="kpi-feed-weight-sub">0.00 MT consumed</div>
+        </div>
+
+        <!-- 6. Eggs Produced & Laying Efficiency -->
+        <div class="kpi-card">
+            <div class="kpi-title">Eggs Produced (Delivered)</div>
+            <div class="kpi-value" id="kpi-eggs-produced">0</div>
+            <div class="kpi-sub" id="kpi-laying-rate">0.0% laying rate</div>
+        </div>
+
+        <!-- 7. Actual Eggs Sold & Realized Revenue -->
+        <div class="kpi-card">
+            <div class="kpi-title">Actual Eggs Sold</div>
+            <div class="kpi-value" id="kpi-eggs-sold">0</div>
+            <div class="kpi-sub" id="kpi-revenue-sub">Revenue: $0.00</div>
+        </div>
+
+        <!-- 8. Realized Daily Profit on Sales -->
+        <div class="kpi-card success">
+            <div class="kpi-title">Realized Profit on Sales</div>
+            <div class="kpi-value" id="kpi-realized-profit">$0.00</div>
+            <div class="kpi-sub" id="kpi-unsold-stock-sub">Unsold: 0 eggs in stock</div>
+        </div>
+    </div>
+
+    <!-- Comparative Side-by-Side Analysis Box -->
+    <div class="comparison-container">
+        <div class="comparison-box left">
+            <h3 style="color: #9b1c1c; margin-top: 0; font-size: 1.1rem;">📉 Production Cost Breakdown</h3>
+            <div style="font-size: 0.95rem; line-height: 1.8;">
+                <div>Total Feed Spent Today: <strong id="comp-feed-spent">$0.00</strong></div>
+                <div>Live Flock Count: <strong id="comp-flock-count">0 birds</strong></div>
+                <div>Daily Feed Intake per Bird: <strong id="comp-feed-intake">0 grams / bird</strong></div>
+                <div>Eggs Produced (Gathered): <strong id="comp-eggs-gathered">0 eggs</strong></div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #feb2b2; font-size: 1.05rem;">
+                    <strong>Cost to Generate 1 Egg: </strong>
+                    <span id="comp-egg-cost" style="font-weight: bold; color: #9b1c1c;">$0.0000</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="comparison-box right">
+            <h3 style="color: #046c4e; margin-top: 0; font-size: 1.1rem;">📈 Commercial Sales & Profitability</h3>
+            <div style="font-size: 0.95rem; line-height: 1.8;">
+                <div>Today's Egg Market Price: <strong id="comp-selling-price">$0.0000 / egg</strong></div>
+                <div>Actual Eggs Sold: <strong id="comp-eggs-sold">0 eggs</strong> (<span id="comp-sales-pct">0%</span> of produced)</div>
+                <div>Actual Revenue Generated: <strong id="comp-revenue">$0.00</strong></div>
+                <div>Closing Unsold Eggs in Stock: <strong id="comp-closing-eggs">0 eggs</strong></div>
+                <div>Unsold Eggs Stored Valuation: <strong id="comp-unsold-val">$0.00</strong></div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #9ae6b4; font-size: 1.05rem;">
+                    <strong>Realized Gross Profit on Sales: </strong>
+                    <span id="comp-net-profit" style="font-weight: bold; color: #046c4e;">$0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Food Items Consumed (Diet Breakdown) -->
+    <div class="panel">
+        <h2 style="font-size: 1.2rem; margin-top: 0;">🌽 Food Items Given to Birds on Selected Date</h2>
+        <p style="color: #627d98; font-size: 0.9rem;">Itemized breakdown of the feed consumed, unit purchase cost, and percentage contribution to daily feed cost and weight.</p>
+
+        <!-- Visual Progress Track -->
+        <div id="diet-progress-track" class="progress-track"></div>
+
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Food Item</th>
+                        <th>Category</th>
+                        <th>Quantity (MT)</th>
+                        <th>Quantity (kg)</th>
+                        <th>Unit Cost ($/kg)</th>
+                        <th>Unit Cost ($/MT)</th>
+                        <th>Total Cost ($)</th>
+                        <th>% of Feed Cost</th>
+                        <th>% of Diet Weight</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody id="diet-breakdown-body">
+                    <tr><td colspan="10" style="text-align: center;">Loading feed breakdown...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Multi-Day Historical Trend & Comparison -->
+    <div class="panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+            <div>
+                <h2 style="font-size: 1.2rem; margin: 0;">📊 Historical Cost & Profitability Trends</h2>
+                <p style="color: #627d98; font-size: 0.85rem; margin: 4px 0 0 0;">Comparing daily production cost per egg vs selling price, eggs produced vs eggs sold, and realized profits over time.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" class="secondary btn-sm" onclick="loadHistory(7)">Last 7 Days</button>
+                <button type="button" class="secondary btn-sm" onclick="loadHistory(14)">Last 14 Days</button>
+                <button type="button" class="secondary btn-sm" onclick="loadHistory(30)">Last 30 Days</button>
+            </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Active Birds</th>
+                        <th>Total Feed (MT)</th>
+                        <th>Total Feed Cost</th>
+                        <th>Cost / Bird</th>
+                        <th>Eggs Produced</th>
+                        <th>Cost / Egg Produced</th>
+                        <th>Egg Selling Price</th>
+                        <th>Margin / Egg</th>
+                        <th>Eggs Sold</th>
+                        <th>Realized Profit</th>
+                        <th>Closing Stock</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table-body">
+                    <tr><td colspan="12" style="text-align: center;">Loading historical trends...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/cost-analysis.js"></script>
+</body>
+</html>
