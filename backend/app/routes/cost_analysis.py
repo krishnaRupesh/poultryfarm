@@ -182,6 +182,22 @@ def _get_analysis_for_date(target_date: date):
 
 @cost_analysis_bp.route("/daily", methods=["GET"])
 def get_daily_analysis():
+    """
+    Get comprehensive daily cost-per-bird and cost-per-egg profitability analysis
+    ---
+    tags:
+      - Cost Analysis
+    parameters:
+      - in: query
+        name: date
+        type: string
+        format: date
+        required: false
+        description: Date for analysis (YYYY-MM-DD, defaults to latest recorded date)
+    responses:
+      200:
+        description: Detailed daily analysis including feed cost per bird, production cost per egg, realized sales profit, and diet breakdown
+    """
     date_str = request.args.get("date")
     if date_str:
         target_date, err = parse_date(date_str, "date")
@@ -200,6 +216,34 @@ def get_daily_analysis():
 
 @cost_analysis_bp.route("/history", methods=["GET"])
 def get_analysis_history():
+    """
+    Get historical multi-day comparative cost-per-egg vs selling price trends
+    ---
+    tags:
+      - Cost Analysis
+    parameters:
+      - in: query
+        name: days
+        type: integer
+        required: false
+        default: 14
+        description: Number of recent days to return
+      - in: query
+        name: start_date
+        type: string
+        format: date
+        required: false
+        description: Custom start date (YYYY-MM-DD)
+      - in: query
+        name: end_date
+        type: string
+        format: date
+        required: false
+        description: Custom end date (YYYY-MM-DD)
+    responses:
+      200:
+        description: Array of daily analytical metrics over the specified time range
+    """
     start_date_str = request.args.get("start_date")
     end_date_str = request.args.get("end_date")
     days_count = request.args.get("days", 14, type=int)

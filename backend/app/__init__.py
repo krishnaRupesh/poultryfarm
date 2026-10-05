@@ -24,7 +24,6 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     db.init_app(app)
-    Swagger(app)
 
     if app.config.get("AUTO_CREATE_TABLES"):
         with app.app_context():
@@ -39,6 +38,28 @@ def create_app(config_class=Config):
     app.register_blueprint(feed_inventory_bp, url_prefix="/api/feed")
     app.register_blueprint(daily_operations_bp, url_prefix="/api/daily")
     app.register_blueprint(cost_analysis_bp, url_prefix="/api/analysis")
+
+    swagger_template = {
+        "swagger": "2.0",
+        "info": {
+            "title": "Poultry Farm Management & Finance API",
+            "description": "API documentation for feed inventory, daily operations, cost-per-egg analysis, orders, payments, products, and customer balances.",
+            "version": "2.0.0",
+        },
+        "tags": [
+            {"name": "Feed Inventory", "description": "Manage poultry feed ingredients, stock levels, and valuations"},
+            {"name": "Feed Purchases", "description": "Feed procurement, stock-in batches, and weighted average costing"},
+            {"name": "Daily Operations", "description": "Daily live flock count, feeding consumption, and egg production/sales"},
+            {"name": "Cost Analysis", "description": "Daily cost-per-bird, cost-per-egg, profit margins, and trends"},
+            {"name": "Products", "description": "Product catalog and daily market rates"},
+            {"name": "Customers", "description": "Customer profiles and contact info"},
+            {"name": "Orders", "description": "Sales orders"},
+            {"name": "Payments", "description": "Customer payment transactions"},
+            {"name": "Customer Balances", "description": "Customer balance sheets and account ledgers"},
+            {"name": "Incidents", "description": "Farm incident and expenditure tracking"},
+        ],
+    }
+    Swagger(app, template=swagger_template)
 
     @app.route("/")
     def serve_dashboard():

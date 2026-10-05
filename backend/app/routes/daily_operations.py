@@ -28,6 +28,22 @@ daily_operations_bp = Blueprint("daily_operations", __name__)
 # -----------------------------------------------------------------------------
 @daily_operations_bp.route("/flock", methods=["GET"])
 def get_flock():
+    """
+    Get live flock count and mortality
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: query
+        name: date
+        type: string
+        format: date
+        required: false
+        description: Date for flock count (defaults to latest recorded)
+    responses:
+      200:
+        description: Flock count details
+    """
     target_date = request.args.get("date")
     if target_date:
         d, err = parse_date(target_date, "date")
@@ -54,6 +70,45 @@ def get_flock():
 
 @daily_operations_bp.route("/flock", methods=["POST"])
 def record_flock():
+    """
+    Record or update active flock count for a date
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - date
+            - active_birds
+          properties:
+            date:
+              type: string
+              format: date
+              example: "2026-10-05"
+            active_birds:
+              type: integer
+              example: 10000
+            mortality:
+              type: integer
+              example: 3
+            remarks:
+              type: string
+              example: Flock in Shed A & B healthy
+            created_by:
+              type: string
+              example: system
+    responses:
+      200:
+        description: Flock record updated
+      201:
+        description: Flock record created
+      400:
+        description: Validation error
+    """
     data, error = request_data()
     if error:
         return error
@@ -108,6 +163,27 @@ def record_flock():
 # -----------------------------------------------------------------------------
 @daily_operations_bp.route("/consumption", methods=["GET"])
 def get_feed_consumption():
+    """
+    List daily feed consumption entries
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: query
+        name: date
+        type: string
+        format: date
+        required: false
+        description: Filter by date (YYYY-MM-DD)
+      - in: query
+        name: item_id
+        type: integer
+        required: false
+        description: Filter by feed item ID
+    responses:
+      200:
+        description: List of feed consumption logs
+    """
     query = active_query(DailyFeedConsumption)
     target_date = request.args.get("date")
     if target_date:
@@ -126,6 +202,56 @@ def get_feed_consumption():
 
 @daily_operations_bp.route("/consumption", methods=["POST"])
 def record_feed_consumption():
+    """
+    Log feed consumed by poultry birds (deducts from inventory stock)
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - date
+          properties:
+            date:
+              type: string
+              format: date
+              example: "2026-10-05"
+            items:
+              type: array
+              items:
+                type: object
+                required:
+                  - item_id
+                  - quantity
+                properties:
+                  item_id:
+                    type: integer
+                    example: 1
+                  quantity:
+                    type: number
+                    example: 1.0
+                  unit:
+                    type: string
+                    enum: [MT, kg, bags]
+                    example: "MT"
+                  remarks:
+                    type: string
+                    example: Morning feed
+            created_by:
+              type: string
+              example: system
+    responses:
+      201:
+        description: Consumption recorded and stock deducted
+      400:
+        description: Validation error
+      404:
+        description: Feed item not found
+    """
     data, error = request_data()
     if error:
         return error
@@ -199,6 +325,22 @@ def record_feed_consumption():
 
 @daily_operations_bp.route("/consumption/<int:consumption_id>", methods=["DELETE"])
 def delete_feed_consumption(consumption_id):
+    """
+    Delete a feed consumption entry and restore inventory stock
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: path
+        name: consumption_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Consumption record deleted and stock restored
+      404:
+        description: Consumption record not found
+    """
     rec = active_query(DailyFeedConsumption).filter_by(consumption_id=consumption_id).first()
     if not rec:
         return jsonify({"error": "Consumption record not found"}), 404
@@ -220,6 +362,22 @@ def delete_feed_consumption(consumption_id):
 # -----------------------------------------------------------------------------
 @daily_operations_bp.route("/egg-operations/latest-stock", methods=["GET"])
 def get_latest_egg_stock():
+    """
+    Get latest closing egg stock to carry forward as opening stock
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: query
+        name: date
+        type: string
+        format: date
+        required: false
+        description: Date to find prior closing stock before
+    responses:
+      200:
+        description: Prior closing egg stock
+    """
     target_date = request.args.get("date")
     if target_date:
         d, err = parse_date(target_date, "date")
@@ -248,6 +406,31 @@ def get_latest_egg_stock():
 
 @daily_operations_bp.route("/egg-operations", methods=["GET"])
 def get_egg_operations():
+    """
+    List daily egg operations (production, sales, and closing stock)
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: query
+        name: date
+        type: string
+        format: date
+        required: false
+      - in: query
+        name: start_date
+        type: string
+        format: date
+        required: false
+      - in: query
+        name: end_date
+        type: string
+        format: date
+        required: false
+    responses:
+      200:
+        description: List of egg operations records
+    """
     query = active_query(DailyEggOperation)
 
     target_date = request.args.get("date")
@@ -274,6 +457,58 @@ def get_egg_operations():
 
 @daily_operations_bp.route("/egg-operations", methods=["POST"])
 def record_egg_operations():
+    """
+    Record daily eggs produced, damaged, actual eggs sold, and selling price
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - date
+            - eggs_produced
+          properties:
+            date:
+              type: string
+              format: date
+              example: "2026-10-05"
+            opening_stock:
+              type: integer
+              example: 3185
+            eggs_produced:
+              type: integer
+              example: 8840
+            damaged_eggs:
+              type: integer
+              example: 35
+            eggs_sold:
+              type: integer
+              example: 8000
+            egg_price_per_unit:
+              type: number
+              example: 0.078
+            price_unit:
+              type: string
+              enum: [per_egg, per_tray, per_hundred, per_dozen]
+              example: "per_egg"
+            remarks:
+              type: string
+              example: Delivered to wholesale market
+            created_by:
+              type: string
+              example: system
+    responses:
+      200:
+        description: Egg operations updated
+      201:
+        description: Egg operations created
+      400:
+        description: Validation error
+    """
     data, error = request_data()
     if error:
         return error
@@ -329,7 +564,6 @@ def record_egg_operations():
     closing_stock = eggs_available - eggs_sold
 
     # Today's egg selling price per unit:
-    # Supports passing price directly per single egg, or per dozen / per 100 / per tray
     price_val = data.get("egg_price_per_unit")
     price_unit = (data.get("price_unit") or "per_egg").lower()
 
@@ -401,6 +635,22 @@ def record_egg_operations():
 
 @daily_operations_bp.route("/egg-operations/<int:record_id>", methods=["DELETE"])
 def delete_egg_operations(record_id):
+    """
+    Delete an egg operations record
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: path
+        name: record_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Record deleted
+      404:
+        description: Record not found
+    """
     rec = active_query(DailyEggOperation).filter_by(record_id=record_id).first()
     if not rec:
         return jsonify({"error": "Record not found"}), 404
