@@ -30,11 +30,11 @@ gcloud config set project $PROJECT_ID
 ---
 
 ### Step 2.2: Enable Required Google APIs
-Enable Cloud Run, Container Registry, BigQuery, and Resource Manager APIs:
+Enable Cloud Run, Artifact Registry, BigQuery, and Resource Manager APIs:
 ```bash
 gcloud services enable \
   run.googleapis.com \
-  containerregistry.googleapis.com \
+  artifactregistry.googleapis.com \
   bigquery.googleapis.com \
   cloudresourcemanager.googleapis.com \
   iam.googleapis.com
@@ -52,7 +52,7 @@ gcloud iam service-accounts create github-deployer \
 ---
 
 ### Step 2.4: Grant Necessary IAM Roles to the Service Account
-Grant permissions to deploy to Cloud Run, push Docker images to Container Registry, manage BigQuery, and act as a runtime service account:
+Grant permissions to deploy to Cloud Run, push Docker images to Artifact Registry, manage BigQuery, and act as a runtime service account:
 
 ```bash
 SA_EMAIL="github-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -62,17 +62,22 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/run.admin"
 
-# 2. Storage Admin (to push Docker images to Container Registry)
+# 2. Artifact Registry Writer (to push Docker images to Artifact Registry)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/artifactregistry.writer"
+
+# 3. Storage Admin (for deployment storage access)
 gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/storage.admin"
 
-# 3. BigQuery Admin (to create dataset and manage BigQuery tables)
+# 4. BigQuery Admin (to create dataset and manage BigQuery tables)
 gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/bigquery.admin"
 
-# 4. Service Account User (to allow Cloud Run to run using the default compute service account)
+# 5. Service Account User (to allow Cloud Run to run using the default compute service account)
 gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/iam.serviceAccountUser"

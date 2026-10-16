@@ -20,6 +20,7 @@ on:
 env:
   GCP_REGION: us-central1
   SERVICE_NAME: poultry-farm-app
+  ARTIFACT_REPO: poultry-farm-repo
   BIGQUERY_DATASET: poultry_farm
 
 jobs:
@@ -66,26 +67,37 @@ jobs:
           echo "Deploying BigQuery dataset and schema..."
           python sql/init_bigquery.py "$GCP_PROJECT_ID" "$BIGQUERY_DATASET"
 
-      # 5. Configure Docker Authentication to Google Container/Artifact Registry
-      - name: Configure Docker for Google Container Registry
+      # 5. Set up Artifact Registry & Configure Docker Authentication
+      - name: Configure Artifact Registry
         run: |
-          gcloud auth configure-docker --quiet
+          echo "Enabling Artifact Registry API..."
+          gcloud services enable artifactregistry.googleapis.com
+          
+          echo "Checking/creating Artifact Registry repository..."
+          gcloud artifacts repositories describe ${{ env.ARTIFACT_REPO }} --location=${{ env.GCP_REGION }} >/dev/null 2>&1 || \
+          gcloud artifacts repositories create ${{ env.ARTIFACT_REPO }} \
+            --repository-format=docker \
+            --location=${{ env.GCP_REGION }} \
+            --description="Poultry Farm Docker Repository"
 
-      # 6. Build and Push Docker Container Image
+          echo "Configuring Docker auth for ${{ env.GCP_REGION }}-docker.pkg.dev..."
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # 6. Build and Push Docker Container Image to Artifact Registry
       - name: Build & Push Docker Image
         env:
-          IMAGE_TAG: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          IMAGE_TAG: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
         run: |
           echo "Building Docker container image: $IMAGE_TAG"
           docker build -t "$IMAGE_TAG" .
-          echo "Pushing image to Google Container Registry..."
+          echo "Pushing image to Artifact Registry..."
           docker push "$IMAGE_TAG"
 
       # 7. Deploy to Google Cloud Run (Serverless, scale-to-zero)
       - name: Deploy to Cloud Run
         id: deploy_cloud_run
         env:
-          IMAGE_TAG: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          IMAGE_TAG: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
         run: |
           echo "Deploying service to Cloud Run..."
           gcloud run deploy ${{ env.SERVICE_NAME }} \
@@ -118,5 +130,6 @@ jobs:
           echo "🌐 Application URL (Unified Cloud Run): ${{ env.CLOUD_RUN_URL }}"
           echo "📖 Swagger API Docs: ${{ env.CLOUD_RUN_URL }}/apidocs"
           echo "📊 BigQuery Dataset: ${{ env.BIGQUERY_DATASET }}"
+          echo "📦 Image Registry: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}"
           echo "💰 Idle Cost: $0.00 (min-instances=0, scales to zero)"
           echo "=========================================================="
