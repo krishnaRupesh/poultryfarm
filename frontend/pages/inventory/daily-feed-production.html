@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Feeding & Egg Operations</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="page-header">
+        <div>
+            <h1>Daily Feeding & Egg Operations</h1>
+            <p style="margin: 4px 0 0 0; color: #627d98;">Log daily bird count, food items consumed (in MT / kg), egg production, and actual egg sales.</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a class="back-link" href="daily-cost-analysis.html">Daily Cost Analysis</a>
+            <a class="back-link" href="feed-inventory.html">Feed Inventory</a>
+            <a class="back-link" href="../../index.html">Dashboard</a>
+        </div>
+    </div>
+
+    <div id="status-message" class="status"></div>
+
+    <!-- Date Control Panel -->
+    <div class="panel" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <label for="operation-date" style="margin: 0; font-size: 1rem;">Select Operation Date:</label>
+            <input type="date" id="operation-date" style="margin: 0; width: 170px;" onchange="loadDateData()">
+            <button type="button" class="secondary btn-sm" onclick="setTodayDate()">Today</button>
+        </div>
+        <div>
+            <a class="back-link" style="display: inline-block; padding: 8px 14px; background: #1f6feb; color: #fff;" href="daily-cost-analysis.html" id="view-analysis-link">📊 View Today's Cost Analysis</a>
+        </div>
+    </div>
+
+    <!-- Main Entry Form -->
+    <form id="daily-ops-form" onsubmit="handleSaveDailyOps(event)">
+        <!-- 1. FLOCK BIRD COUNT -->
+        <div class="panel">
+            <h2 style="font-size: 1.15rem; color: #102a43; border-bottom: 1px solid #d9e2ec; padding-bottom: 8px; margin-bottom: 14px;">
+                🐔 1. Flock Count (Active Birds)
+            </h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="active-birds">Live Active Birds Today *</label>
+                    <input type="number" id="active-birds" required min="1" placeholder="e.g. 10000" oninput="calculateLiveMetrics()">
+                    <span style="font-size: 0.78rem; color: #627d98;">Used to calculate feed cost per bird</span>
+                </div>
+                <div class="form-group">
+                    <label for="flock-mortality">Mortality / Died Today</label>
+                    <input type="number" id="flock-mortality" min="0" value="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="flock-remarks">Flock Notes</label>
+                    <input type="text" id="flock-remarks" placeholder="Optional notes on bird health/shed...">
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. DAILY FEED CONSUMED -->
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #d9e2ec; padding-bottom: 8px;">
+                <h2 style="font-size: 1.15rem; color: #102a43; margin: 0;">
+                    🌽 2. Food Items Consumed (Feeding Birds)
+                </h2>
+                <button type="button" class="btn-sm" onclick="addFeedRow()">+ Add Food Item</button>
+            </div>
+            <p style="font-size: 0.85rem; color: #627d98; margin-top: 0;">
+                Select food items given to the birds today (e.g. 1 Metric Ton corn, 250 kg soybean meal). Stock is deducted automatically.
+            </p>
+
+            <table id="feed-items-table" style="margin-top: 8px; margin-bottom: 14px;">
+                <thead>
+                    <tr>
+                        <th style="width: 32%;">Feed Ingredient *</th>
+                        <th style="width: 18%;">Quantity *</th>
+                        <th style="width: 18%;">Unit</th>
+                        <th style="width: 16%;">Est. Cost ($)</th>
+                        <th style="width: 16%;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="feed-rows-body">
+                    <!-- Dynamic feed rows will be appended here -->
+                </tbody>
+            </table>
+
+            <div style="display: flex; justify-content: flex-end; gap: 24px; background: #f0f4f8; padding: 10px 16px; border-radius: 6px;">
+                <div>Total Feed: <strong id="total-feed-weight-display">0.00 MT (0 kg)</strong></div>
+                <div>Total Feed Cost: <strong id="total-feed-cost-display" style="color: #0b69a3;">$0.00</strong></div>
+            </div>
+        </div>
+
+        <!-- 3. DAILY EGG OPERATIONS -->
+        <div class="panel">
+            <h2 style="font-size: 1.15rem; color: #102a43; border-bottom: 1px solid #d9e2ec; padding-bottom: 8px; margin-bottom: 14px;">
+                🥚 3. Egg Production & Actual Sales
+            </h2>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="opening-stock">Opening Unsold Stock</label>
+                    <input type="number" id="opening-stock" min="0" value="0" oninput="calculateEggStock()">
+                    <span style="font-size: 0.78rem; color: #627d98;">Auto-carried forward from prior day</span>
+                </div>
+                <div class="form-group">
+                    <label for="eggs-produced">Eggs Produced / Delivered Today *</label>
+                    <input type="number" id="eggs-produced" required min="0" placeholder="e.g. 8800" oninput="calculateEggStock(); calculateLiveMetrics();">
+                </div>
+                <div class="form-group">
+                    <label for="damaged-eggs">Damaged / Broken Eggs</label>
+                    <input type="number" id="damaged-eggs" min="0" value="0" oninput="calculateEggStock()">
+                </div>
+            </div>
+
+            <div class="form-row" style="background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                <div class="form-group">
+                    <label style="color: #486581;">Total Eggs Available for Sale</label>
+                    <div id="display-eggs-available" style="font-size: 1.3rem; font-weight: bold; color: #102a43;">0 eggs</div>
+                    <span style="font-size: 0.78rem; color: #627d98;">Opening + Produced - Damaged</span>
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="eggs-sold">Actual Eggs Sold Today *</label>
+                        <button type="button" class="btn-sm secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="quickFillAllSold()">Quick 100% Sold</button>
+                    </div>
+                    <input type="number" id="eggs-sold" required min="0" placeholder="e.g. 8000" oninput="calculateEggStock(); calculateLiveMetrics();">
+                    <span style="font-size: 0.78rem; color: #627d98;">Not assumed 100%; enter actual count sold</span>
+                </div>
+                <div class="form-group">
+                    <label style="color: #486581;">Closing Unsold Egg Stock</label>
+                    <div id="display-closing-stock" style="font-size: 1.3rem; font-weight: bold; color: #0b69a3;">0 eggs</div>
+                    <span style="font-size: 0.78rem; color: #627d98;">Remaining in cold storage/farm</span>
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 14px;">
+                <div class="form-group">
+                    <label for="egg-price">Today's Egg Market Price *</label>
+                    <input type="number" step="0.001" id="egg-price" required placeholder="e.g. 0.075 or 2.25" oninput="calculateEggStock(); calculateLiveMetrics();">
+                </div>
+                <div class="form-group">
+                    <label for="egg-price-unit">Price Quoted Per</label>
+                    <select id="egg-price-unit" onchange="calculateEggStock(); calculateLiveMetrics();">
+                        <option value="per_egg">Per Single Egg ($)</option>
+                        <option value="per_tray">Per Tray (30 Eggs)</option>
+                        <option value="per_hundred">Per 100 Eggs</option>
+                        <option value="per_dozen">Per Dozen (12 Eggs)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="color: #486581;">Calculated Price per Egg</label>
+                    <div id="display-unit-price" style="font-size: 1.15rem; font-weight: bold; color: #102a43; margin-top: 8px;">$0.0000 / egg</div>
+                </div>
+                <div class="form-group">
+                    <label style="color: #486581;">Actual Revenue Generated</label>
+                    <div id="display-actual-revenue" style="font-size: 1.25rem; font-weight: bold; color: #155724; margin-top: 8px;">$0.00</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="egg-remarks">Sales & Delivery Remarks</label>
+                <input type="text" id="egg-remarks" placeholder="e.g. 8,000 delivered to wholesale distributor; 3,990 stored">
+            </div>
+        </div>
+
+        <!-- 4. LIVE METRIC CALCULATION PREVIEW -->
+        <div class="panel" style="background: linear-gradient(135deg, #f0f7ff 0%, #e6fffa 100%); border: 1px solid #b2f5ea;">
+            <h2 style="font-size: 1.1rem; color: #0d3880; margin-top: 0; margin-bottom: 12px;">
+                ⚡ Live Performance Preview for Selected Date
+            </h2>
+            <div class="kpi-grid" style="margin-bottom: 0;">
+                <div class="kpi-card">
+                    <div class="kpi-title">Feed Cost per Bird</div>
+                    <div class="kpi-value" id="preview-cost-per-bird" style="color: #0b69a3;">$0.0000</div>
+                    <div class="kpi-sub">Feed cost / Active birds</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Cost per Egg Produced</div>
+                    <div class="kpi-value" id="preview-cost-per-egg" style="color: #b7791f;">$0.0000</div>
+                    <div class="kpi-sub">Feed cost / Eggs produced</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Margin per Egg Sold</div>
+                    <div class="kpi-value" id="preview-margin-per-egg" style="color: #155724;">$0.0000</div>
+                    <div class="kpi-sub">Selling price - Cost per egg</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Realized Profit on Sales</div>
+                    <div class="kpi-value" id="preview-realized-profit" style="color: #155724;">$0.00</div>
+                    <div class="kpi-sub">Eggs sold × Profit margin</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 12px;">
+            <button type="submit" style="padding: 12px 24px; font-size: 1.05rem;">💾 Save Daily Operations Log</button>
+            <button type="button" class="secondary" onclick="loadDateData()">Reset Form</button>
+        </div>
+    </form>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/daily-feed-production.js"></script>
+</body>
+</html>

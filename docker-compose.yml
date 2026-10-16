@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    image: poultryfarm-cloudrun:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DATABASE_BACKEND=sqlite
+      - FLASK_DEBUG=false
+    restart: unless-stopped
