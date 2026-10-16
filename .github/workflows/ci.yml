@@ -1,0 +1,53 @@
+name: Continuous Integration & Verification
+
+on:
+  push:
+    branches: [ main, master, codex/* ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ main, master ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+jobs:
+  test:
+    name: Run Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Initialize SQLite Database
+        run: |
+          python sql/init_sqlite_db.py
+
+      - name: Run Test Suite
+        run: |
+          python -m unittest backend/tests/test_feed_and_cost_analysis.py
+
+      - name: Verify Swagger OpenAPI Specification
+        run: |
+          python -c "
+          import sys; sys.path.insert(0, 'backend')
+          from app import create_app
+          client = create_app().test_client()
+          res = client.get('/apispec_1.json')
+          assert res.status_code == 200, f'Swagger spec error: {res.status_code}'
+          paths = res.get_json().get('paths', {})
+          print(f'Swagger verification passed! Discovered {len(paths)} endpoints.')
+          "

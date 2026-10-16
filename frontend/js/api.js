@@ -1,7 +1,18 @@
 const DEFAULT_USER = 'frontend';
 
+// Supports standalone Cloud Storage hosting (via window.API_BASE_URL)
+// or unified Cloud Run container hosting (relative path)
+function getApiUrl(path) {
+    const base = (typeof window !== 'undefined' && window.API_BASE_URL) ? window.API_BASE_URL.replace(/\/+$/, '') : '';
+    if (base && path.startsWith('/')) {
+        return `${base}${path}`;
+    }
+    return path;
+}
+
 async function apiRequest(path, options = {}) {
-    const response = await fetch(path, {
+    const url = getApiUrl(path);
+    const response = await fetch(url, {
         headers: {
             'Content-Type': 'application/json',
             ...(options.headers || {})

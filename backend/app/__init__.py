@@ -61,6 +61,13 @@ def create_app(config_class=Config):
     }
     Swagger(app, template=swagger_template)
 
+    @app.after_request
+    def add_cors_headers(response):
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
+
     @app.route("/")
     def serve_dashboard():
         return send_from_directory(FRONTEND_DIR, "index.html")
