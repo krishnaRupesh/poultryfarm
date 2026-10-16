@@ -70,15 +70,12 @@ jobs:
       # 5. Set up Artifact Registry & Configure Docker Authentication
       - name: Configure Artifact Registry
         run: |
-          echo "Enabling Artifact Registry API..."
-          gcloud services enable artifactregistry.googleapis.com
-          
           echo "Checking/creating Artifact Registry repository..."
           gcloud artifacts repositories describe ${{ env.ARTIFACT_REPO }} --location=${{ env.GCP_REGION }} >/dev/null 2>&1 || \
           gcloud artifacts repositories create ${{ env.ARTIFACT_REPO }} \
             --repository-format=docker \
             --location=${{ env.GCP_REGION }} \
-            --description="Poultry Farm Docker Repository"
+            --description="Poultry Farm Docker Repository" || true
 
           echo "Configuring Docker auth for ${{ env.GCP_REGION }}-docker.pkg.dev..."
           gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
