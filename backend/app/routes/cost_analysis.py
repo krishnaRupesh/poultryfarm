@@ -8,29 +8,41 @@ from ..models import (
     DailyFlockStatus,
     FeedItem,
     Product,
+    FlockBatch,
+    Shed,
 )
 from .helpers import active_query, parse_date
 
 cost_analysis_bp = Blueprint("cost_analysis", __name__)
 
 
-def _get_analysis_for_date(target_date: date):
+def _get_analysis_for_date(target_date: date, batch_id: int = None, shed_id: int = None):
     # 1. Flock count
-    flock_rec = (
-        active_query(DailyFlockStatus)
-        .filter(DailyFlockStatus.date <= target_date)
-        .order_by(DailyFlockStatus.date.desc())
-        .first()
-    )
-    active_birds = flock_rec.active_birds if flock_rec else 0
-    mortality = flock_rec.mortality if (flock_rec and flock_rec.date == target_date) else 0
+    flock_q = active_query(DailyFlockStatus).filter(DailyFlockStatus.date <= target_date)
+    if batch_id:
+        flock_q = flock_q.filter_by(batch_id=batch_id)
+    elif shed_id:
+        flock_q = flock_q.filter_by(shed_id=shed_id)
+
+    flock_rec = flock_q.order_by(DailyFlockStatus.date.desc()).first()
+
+    # Fallback if specific batch has current_birds
+    if not flock_rec and batch_id:
+        b = active_query(FlockBatch).filter_by(batch_id=batch_id).first()
+        active_birds = b.current_birds if b else 0
+        mortality = 0
+    else:
+        active_birds = flock_rec.active_birds if flock_rec else 0
+        mortality = flock_rec.mortality if (flock_rec and flock_rec.date == target_date) else 0
 
     # 2. Feed consumption for target_date
-    consumptions = (
-        active_query(DailyFeedConsumption)
-        .filter_by(date=target_date)
-        .all()
-    )
+    feed_q = active_query(DailyFeedConsumption).filter_by(date=target_date)
+    if batch_id:
+        feed_q = feed_q.filter_by(batch_id=batch_id)
+    elif shed_id:
+        feed_q = feed_q.filter_by(shed_id=shed_id)
+
+    consumptions = feed_q.all()
 
     feed_items_list = []
     total_feed_kg = Decimal("0.0")
@@ -53,6 +65,8 @@ def _get_analysis_for_date(target_date: date):
             "cost_per_kg": float(unit_cost),
             "cost_per_mt": round(float(unit_cost) * 1000.0, 2),
             "total_cost": float(cost),
+            "batch_id": c.batch_id,
+            "batch_name": c.batch.batch_name if c.batch else None,
             "remarks": c.remarks,
         })
 
@@ -82,11 +96,13 @@ def _get_analysis_for_date(target_date: date):
     )
 
     # 4. Egg operations
-    egg_op = (
-        active_query(DailyEggOperation)
-        .filter_by(date=target_date)
-        .first()
-    )
+    egg_q = active_query(DailyEggOperation).filter_by(date=target_date)
+    if batch_id:
+        egg_q = egg_q.filter_by(batch_id=batch_id)
+    elif shed_id:
+        egg_q = egg_q.filter_by(shed_id=shed_id)
+
+    egg_op = egg_q.first()
 
     eggs_produced = egg_op.eggs_produced if egg_op else 0
     damaged_eggs = egg_op.damaged_eggs if egg_op else 0
@@ -99,7 +115,6 @@ def _get_analysis_for_date(target_date: date):
     if egg_op and egg_op.egg_price_per_unit:
         egg_selling_price = float(egg_op.egg_price_per_unit)
     else:
-        # Fallback to products table egg rate
         egg_product = (
             Product.query.filter(
                 Product.product_name.ilike("%egg%"),
@@ -141,8 +156,52 @@ def _get_analysis_for_date(target_date: date):
         else 0.0
     )
 
+    # 7. Multi-Shed / Batch Breakdown Comparison
+    batch_breakdown = []
+    batches = active_query(FlockBatch).filter_by(status="Active").all()
+    for b in batches:
+        b_flock = (
+            active_query(DailyFlockStatus)
+            .filter(DailyFlockStatus.batch_id == b.batch_id, DailyFlockStatus.date <= target_date)
+            .order_by(DailyFlockStatus.date.desc())
+            .first()
+        )
+        b_birds = b_flock.active_birds if b_flock else b.current_birds
+        b_mortality = b_flock.mortality if (b_flock and b_flock.date == target_date) else 0
+
+        # Feed for this batch
+        b_consumptions = active_query(DailyFeedConsumption).filter_by(date=target_date, batch_id=b.batch_id).all()
+        b_feed_cost = sum(float(c.total_cost or 0.0) for c in b_consumptions)
+        b_feed_kg = sum(float(c.quantity_kg or 0.0) for c in b_consumptions)
+
+        # Egg ops for this batch
+        b_egg = active_query(DailyEggOperation).filter_by(date=target_date, batch_id=b.batch_id).first()
+        b_eggs_produced = b_egg.eggs_produced if b_egg else 0
+        b_lay_pct = round((b_eggs_produced / b_birds) * 100, 2) if b_birds > 0 else 0.0
+        b_cost_per_bird = round(b_feed_cost / b_birds, 4) if b_birds > 0 else 0.0
+        b_cost_per_egg = round(b_feed_cost / b_eggs_produced, 4) if b_eggs_produced > 0 else 0.0
+
+        batch_breakdown.append({
+            "batch_id": b.batch_id,
+            "batch_name": b.batch_name,
+            "shed_id": b.shed_id,
+            "shed_name": b.shed.shed_name if b.shed else "Unassigned",
+            "breed": b.breed,
+            "age_weeks": b.age_weeks,
+            "active_birds": b_birds,
+            "mortality": b_mortality,
+            "feed_kg": round(b_feed_kg, 1),
+            "feed_cost": round(b_feed_cost, 2),
+            "feed_cost_per_bird": b_cost_per_bird,
+            "eggs_produced": b_eggs_produced,
+            "laying_percentage": b_lay_pct,
+            "cost_per_egg": b_cost_per_egg,
+        })
+
     return {
         "date": target_date.isoformat(),
+        "batch_id": batch_id,
+        "shed_id": shed_id,
         "flock": {
             "active_birds": active_birds,
             "mortality": mortality,
@@ -177,6 +236,7 @@ def _get_analysis_for_date(target_date: date):
             "daily_feed_cash_flow": daily_feed_cash_flow,
             "is_profitable": profit_margin_per_egg > 0,
         },
+        "batch_breakdown": batch_breakdown,
     }
 
 
@@ -193,10 +253,17 @@ def get_daily_analysis():
         type: string
         format: date
         required: false
-        description: Date for analysis (YYYY-MM-DD, defaults to latest recorded date)
+      - in: query
+        name: batch_id
+        type: integer
+        required: false
+      - in: query
+        name: shed_id
+        type: integer
+        required: false
     responses:
       200:
-        description: Detailed daily analysis including feed cost per bird, production cost per egg, realized sales profit, and diet breakdown
+        description: Detailed daily analysis
     """
     date_str = request.args.get("date")
     if date_str:
@@ -204,13 +271,15 @@ def get_daily_analysis():
         if err:
             return err
     else:
-        # Default to latest date from consumption or egg ops or today
         latest_op = active_query(DailyEggOperation).order_by(DailyEggOperation.date.desc()).first()
         latest_c = active_query(DailyFeedConsumption).order_by(DailyFeedConsumption.date.desc()).first()
         dates = [d for d in [latest_op.date if latest_op else None, latest_c.date if latest_c else None] if d]
         target_date = max(dates) if dates else date.today()
 
-    result = _get_analysis_for_date(target_date)
+    batch_id = int(request.args.get("batch_id")) if request.args.get("batch_id") else None
+    shed_id = int(request.args.get("shed_id")) if request.args.get("shed_id") else None
+
+    result = _get_analysis_for_date(target_date, batch_id=batch_id, shed_id=shed_id)
     return jsonify(result)
 
 
@@ -226,49 +295,33 @@ def get_analysis_history():
         name: days
         type: integer
         required: false
-        default: 14
-        description: Number of recent days to return
-      - in: query
-        name: start_date
-        type: string
-        format: date
-        required: false
-        description: Custom start date (YYYY-MM-DD)
-      - in: query
-        name: end_date
-        type: string
-        format: date
-        required: false
-        description: Custom end date (YYYY-MM-DD)
+        default: 7
     responses:
       200:
-        description: Array of daily analytical metrics over the specified time range
+        description: Trend series
     """
-    start_date_str = request.args.get("start_date")
-    end_date_str = request.args.get("end_date")
-    days_count = request.args.get("days", 14, type=int)
+    days = int(request.args.get("days", 7))
+    days = min(max(days, 1), 60)
 
-    if end_date_str:
-        end_d, err = parse_date(end_date_str, "end_date")
-        if err:
-            return err
-    else:
-        end_d = date.today()
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days - 1)
 
-    if start_date_str:
-        start_d, err = parse_date(start_date_str, "start_date")
-        if err:
-            return err
-    else:
-        start_d = end_d - timedelta(days=days_count - 1)
-
-    cur = start_d
     history = []
-    while cur <= end_d:
-        analysis = _get_analysis_for_date(cur)
-        # Only include dates that have either feed consumption or egg production recorded
-        if analysis["feed"]["total_feed_cost"] > 0 or analysis["production"]["eggs_produced"] > 0:
-            history.append(analysis)
-        cur += timedelta(days=1)
+    current = start_date
+    while current <= end_date:
+        res = _get_analysis_for_date(current)
+        history.append({
+            "date": current.isoformat(),
+            "cost_per_egg": res["production"]["production_cost_per_egg"],
+            "selling_price": res["sales_and_stock"]["egg_selling_price"],
+            "profit_margin": res["profitability"]["profit_margin_per_egg"],
+            "laying_percentage": res["production"]["laying_percentage"],
+            "realized_profit": res["profitability"]["realized_gross_profit"],
+            "active_birds": res["flock"]["active_birds"],
+            "eggs_produced": res["production"]["eggs_produced"],
+            "eggs_sold": res["sales_and_stock"]["eggs_sold"],
+            "feed_cost": res["feed"]["total_feed_cost"],
+        })
+        current += timedelta(days=1)
 
     return jsonify(history)

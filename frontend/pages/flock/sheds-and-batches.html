@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sheds & Flock Batch Management - Poultry Farm</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <style>
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .shed-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 14px;
+        }
+        .shed-card {
+            background: #fff;
+            border: 1px solid #d9e2ec;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border-top: 4px solid #1f6feb;
+            position: relative;
+        }
+        .shed-card.inactive {
+            border-top-color: #9fb3c8;
+            opacity: 0.75;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(16, 42, 67, 0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-dialog {
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .badge-active { background: #d4edda; color: #155724; }
+        .badge-archived { background: #e2e8f0; color: #475569; text-decoration: line-through; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div>
+            <h1>🏠 Sheds & Flock Batches</h1>
+            <p style="margin: 4px 0 0 0; color: #627d98;">Manage physical poultry sheds and bird lifecycles (e.g. 2026-march-a, 2026-june-b) with live counts and age tracking.</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a class="back-link" href="../inventory/daily-feed-production.html">🌽 Daily Feeding</a>
+            <a class="back-link" href="../inventory/daily-cost-analysis.html">📊 Cost Analysis</a>
+            <a class="back-link" href="../../index.html">Dashboard</a>
+        </div>
+    </div>
+
+    <div id="status-message" class="status"></div>
+
+    <!-- KPI Summary Row -->
+    <div class="kpi-row">
+        <div class="kpi-card">
+            <div class="kpi-title">Active Sheds</div>
+            <div class="kpi-value" id="kpi-active-sheds">--</div>
+            <div class="kpi-sub" id="kpi-total-capacity">Capacity: -- birds</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Active Flock Batches</div>
+            <div class="kpi-value" id="kpi-active-batches" style="color: #0b69a3;">--</div>
+            <div class="kpi-sub">Housed in sheds</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Total Live Birds</div>
+            <div class="kpi-value" id="kpi-total-birds" style="color: #155724;">--</div>
+            <div class="kpi-sub">Across all sheds</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Total Farm Mortality</div>
+            <div class="kpi-value" id="kpi-mortality-rate" style="color: #b7791f;">--</div>
+            <div class="kpi-sub">Cumulative to date</div>
+        </div>
+    </div>
+
+    <!-- Section 1: Sheds Infrastructure -->
+    <div class="panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d9e2ec; padding-bottom: 10px;">
+            <div>
+                <h2 style="margin: 0; font-size: 1.2rem;">🏢 Poultry Sheds</h2>
+                <span style="font-size: 0.85rem; color: #627d98;">Physical housing facilities on farm</span>
+            </div>
+            <button type="button" onclick="openShedModal()">+ Add New Shed</button>
+        </div>
+
+        <div class="shed-grid" id="sheds-container">
+            <!-- Dynamically populated shed cards -->
+        </div>
+    </div>
+
+    <!-- Section 2: Flock Batches Table -->
+    <div class="panel" style="margin-top: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d9e2ec; padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h2 style="margin: 0; font-size: 1.2rem;">🐔 Flock Batches</h2>
+                <span style="font-size: 0.85rem; color: #627d98;">Bird lifecycles, placement dates, and dynamic age tracking</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <label style="display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.9rem; font-weight: normal; cursor: pointer;">
+                    <input type="checkbox" id="show-archived-batches" style="width: auto; margin: 0;" onchange="loadBatches()">
+                    Show Archived Records
+                </label>
+                <button type="button" onclick="openBatchModal()">+ Place New Batch</button>
+            </div>
+        </div>
+
+        <table style="margin-top: 14px;">
+            <thead>
+                <tr>
+                    <th>Batch Name / Code</th>
+                    <th>Assigned Shed</th>
+                    <th>Breed & Purpose</th>
+                    <th>Placement Date</th>
+                    <th>Age (Weeks)</th>
+                    <th>Initial Birds</th>
+                    <th>Live Active Birds</th>
+                    <th>Mortality</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="batches-table-body">
+                <!-- Dynamically populated batch rows -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal: Add / Edit Shed -->
+    <div class="modal-overlay" id="shed-modal">
+        <div class="modal-dialog">
+            <h2 id="shed-modal-title" style="margin-top: 0; margin-bottom: 14px;">Add New Shed</h2>
+            <form id="shed-form" onsubmit="handleSaveShed(event)">
+                <input type="hidden" id="shed-id">
+                
+                <div class="form-group">
+                    <label for="shed-name">Shed Name / Code *</label>
+                    <input type="text" id="shed-name" required placeholder="e.g. Shed A, Layer House 2">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="shed-capacity">Max Bird Capacity *</label>
+                        <input type="number" id="shed-capacity" required min="100" value="10000" placeholder="10000">
+                    </div>
+                    <div class="form-group">
+                        <label for="shed-type">Shed Type</label>
+                        <select id="shed-type">
+                            <option value="Layer">Layer (Egg Production)</option>
+                            <option value="Broiler">Broiler (Meat)</option>
+                            <option value="Grower">Grower / Pullet</option>
+                            <option value="Breeder">Breeder</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="shed-status">Operational Status</label>
+                        <select id="shed-status">
+                            <option value="Active">Active</option>
+                            <option value="Empty">Empty / Sanitizing</option>
+                            <option value="Maintenance">Under Maintenance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="shed-location">Farm Location / Wing</label>
+                        <input type="text" id="shed-location" placeholder="e.g. North Wing, Sector 1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="shed-description">Notes & Equipment Details</label>
+                    <textarea id="shed-description" rows="2" placeholder="e.g. Automated nipple drinking, tunnel ventilation..."></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="secondary" onclick="closeShedModal()">Cancel</button>
+                    <button type="submit">Save Shed</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Place / Edit Flock Batch -->
+    <div class="modal-overlay" id="batch-modal">
+        <div class="modal-dialog">
+            <h2 id="batch-modal-title" style="margin-top: 0; margin-bottom: 14px;">Place New Flock Batch</h2>
+            <form id="batch-form" onsubmit="handleSaveBatch(event)">
+                <input type="hidden" id="batch-id">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="batch-name">Batch Name / ID *</label>
+                        <input type="text" id="batch-name" required placeholder="e.g. 2026-march-a">
+                        <span style="font-size: 0.78rem; color: #627d98;">Standard format: YYYY-Month-Letter</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch-shed-id">Assign to Shed *</label>
+                        <select id="batch-shed-id" required>
+                            <!-- Dynamically populated with sheds -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="batch-breed">Breed *</label>
+                        <input type="text" id="batch-breed" required value="BV300 Layer" placeholder="e.g. BV300, Hy-Line Brown, Cobb 500">
+                    </div>
+                    <div class="form-group">
+                        <label for="batch-bird-type">Purpose</label>
+                        <select id="batch-bird-type">
+                            <option value="Layer">Layer (Egg Production)</option>
+                            <option value="Broiler">Broiler</option>
+                            <option value="Pullet">Pullet</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="batch-placement-date">Placement / Arrival Date *</label>
+                        <input type="date" id="batch-placement-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch-initial-age">Initial Age (Weeks)</label>
+                        <input type="number" id="batch-initial-age" min="0" value="18" placeholder="18">
+                        <span style="font-size: 0.78rem; color: #627d98;">Point of lay is typically 18 weeks</span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="batch-initial-birds">Initial Stock (Birds Placed) *</label>
+                        <input type="number" id="batch-initial-birds" required min="1" placeholder="e.g. 10000" oninput="syncCurrentBirds()">
+                    </div>
+                    <div class="form-group">
+                        <label for="batch-current-birds">Live Current Birds *</label>
+                        <input type="number" id="batch-current-birds" required min="0" placeholder="e.g. 10000">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="batch-status">Lifecycle Status</label>
+                        <select id="batch-status">
+                            <option value="Active">Active (Producing)</option>
+                            <option value="Completed">Completed / Depleted</option>
+                            <option value="Culled">Culled / Sold</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch-depletion-date">Depletion Date (If closed)</label>
+                        <input type="date" id="batch-depletion-date">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="batch-remarks">Notes</label>
+                    <textarea id="batch-remarks" rows="2" placeholder="e.g. Sourced from ABC Hatcheries, vaccinated against ND & IB..."></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="secondary" onclick="closeBatchModal()">Cancel</button>
+                    <button type="submit">Save Batch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/sheds-and-batches.js"></script>
+</body>
+</html>

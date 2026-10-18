@@ -269,6 +269,37 @@ def delete_order(order_id):
     """
     order = Order.query.get_or_404(order_id)
     order.is_deleted = True
+    order.deleted_at = datetime.utcnow()
+    order.deleted_by = request.args.get("deleted_by", "system")
     mark_updated(order)
     db.session.commit()
     return jsonify({"message": "Order deleted"}), 200
+
+
+@orders_bp.route("/<int:order_id>/restore", methods=["POST"])
+def restore_order(order_id):
+    """
+    Restore an archived order
+    ---
+    tags:
+      - Orders
+    parameters:
+      - in: path
+        name: order_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Order restored
+      404:
+        description: Order not found
+    """
+    order = Order.query.filter_by(order_id=order_id).first()
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+    order.is_deleted = False
+    order.deleted_at = None
+    order.deleted_by = None
+    mark_updated(order)
+    db.session.commit()
+    return jsonify({"message": "Order restored successfully", "order": order.as_dict()})

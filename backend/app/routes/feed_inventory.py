@@ -267,9 +267,41 @@ def delete_feed_item(item_id):
         return jsonify({"error": "Feed item not found"}), 404
 
     item.is_deleted = True
+    item.deleted_at = datetime.utcnow()
+    item.deleted_by = request.args.get("deleted_by", "system")
     mark_updated(item, updated_by="system")
     db.session.commit()
     return jsonify({"message": f"Feed item '{item.name}' deleted successfully", "item_id": item_id})
+
+
+@feed_inventory_bp.route("/items/<int:item_id>/restore", methods=["POST"])
+def restore_feed_item(item_id):
+    """
+    Restore an archived feed item
+    ---
+    tags:
+      - Feed Inventory
+    parameters:
+      - in: path
+        name: item_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Feed item restored successfully
+      404:
+        description: Feed item not found
+    """
+    item = FeedItem.query.filter_by(item_id=item_id).first()
+    if not item:
+        return jsonify({"error": "Feed item not found"}), 404
+
+    item.is_deleted = False
+    item.deleted_at = None
+    item.deleted_by = None
+    mark_updated(item, updated_by="system")
+    db.session.commit()
+    return jsonify({"message": f"Feed item '{item.name}' restored successfully", "item": item.as_dict()})
 
 
 # -----------------------------------------------------------------------------
@@ -577,6 +609,44 @@ def delete_purchase(purchase_id):
         mark_updated(item, updated_by="system")
 
     purchase.is_deleted = True
+    purchase.deleted_at = datetime.utcnow()
+    purchase.deleted_by = request.args.get("deleted_by", "system")
     mark_updated(purchase, updated_by="system")
     db.session.commit()
     return jsonify({"message": "Purchase deleted successfully", "purchase_id": purchase_id})
+
+
+@feed_inventory_bp.route("/purchases/<int:purchase_id>/restore", methods=["POST"])
+def restore_purchase(purchase_id):
+    """
+    Restore an archived purchase record and re-add stock
+    ---
+    tags:
+      - Feed Purchases
+    parameters:
+      - in: path
+        name: purchase_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Purchase restored and stock adjusted
+      404:
+        description: Purchase not found
+    """
+    purchase = FeedPurchase.query.filter_by(purchase_id=purchase_id).first()
+    if not purchase:
+        return jsonify({"error": "Purchase not found"}), 404
+
+    # Re-add stock for restored purchase
+    item = purchase.item
+    if item:
+        item.current_stock_kg = (item.current_stock_kg or Decimal("0.0")) + purchase.quantity_kg
+        mark_updated(item, updated_by="system")
+
+    purchase.is_deleted = False
+    purchase.deleted_at = None
+    purchase.deleted_by = None
+    mark_updated(purchase, updated_by="system")
+    db.session.commit()
+    return jsonify({"message": "Purchase restored successfully", "purchase": purchase.as_dict()})

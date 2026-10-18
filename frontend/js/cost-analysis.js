@@ -10,18 +10,22 @@ function setAnalysisDate(dateStr) {
 async function loadDailyAnalysis() {
     clearStatus();
     const dateInput = document.getElementById('analysis-date');
+    const batchSelect = document.getElementById('filter-batch-id');
     let selDate = dateInput.value;
+    let selBatch = batchSelect ? batchSelect.value : '';
 
-    let url = '/api/analysis/daily';
-    if (selDate) {
-        url += `?date=${selDate}`;
-    }
+    let url = '/api/analysis/daily?';
+    const params = new URLSearchParams();
+    if (selDate) params.append('date', selDate);
+    if (selBatch) params.append('batch_id', selBatch);
+    url += params.toString();
 
     try {
         const data = await apiRequest(url);
         dateInput.value = data.date;
 
         renderDailyKPIs(data);
+        renderBatchBreakdown(data.batch_breakdown);
         renderDietBreakdown(data.feed.items, data.feed.total_feed_cost);
         renderComparisonBox(data);
 
@@ -31,6 +35,35 @@ async function loadDailyAnalysis() {
         setStatus(`Error loading analysis: ${err.message}`, 'error');
         document.getElementById('analysis-status-pill').textContent = 'Error';
     }
+}
+
+function renderBatchBreakdown(breakdown) {
+    const tbody = document.getElementById('batch-breakdown-body');
+    if (!tbody) return;
+
+    if (!breakdown || breakdown.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: #627d98;">No batch logs recorded for this date.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = breakdown.map(b => {
+        const costEggDisplay = b.cost_per_egg > 0 ? `$${b.cost_per_egg.toFixed(4)}` : '$0.0000';
+        return `
+            <tr>
+                <td><strong>${escapeHtml(b.batch_name)}</strong></td>
+                <td><span class="badge" style="background: #e2e8f0; color: #102a43;">🛖 ${escapeHtml(b.shed_name)}</span></td>
+                <td>${escapeHtml(b.breed || 'Layer')} (${b.age_weeks} wks)</td>
+                <td><strong>${(b.active_birds || 0).toLocaleString()}</strong></td>
+                <td>${b.mortality || 0}</td>
+                <td>${(b.feed_kg || 0).toLocaleString()} kg (${((b.feed_kg || 0) / 1000).toFixed(3)} MT)</td>
+                <td><strong>$${(b.feed_cost || 0).toFixed(2)}</strong></td>
+                <td>$${(b.feed_cost_per_bird || 0).toFixed(4)}</td>
+                <td>${(b.eggs_produced || 0).toLocaleString()}</td>
+                <td><strong style="color: #0b69a3;">${(b.laying_percentage || 0).toFixed(1)}%</strong></td>
+                <td style="color: #b7791f; font-weight: bold;">${costEggDisplay}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function renderDailyKPIs(data) {
@@ -224,15 +257,41 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Check if date is in query params
+async function loadBatchOptions() {
+    try {
+        const batches = await apiRequest('/api/flock/batches');
+        const batchSelect = document.getElementById('filter-batch-id');
+        if (batchSelect && batches) {
+            batches.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.batch_id;
+                opt.textContent = `${b.batch_name} [${b.shed_name || 'No Shed'}]`;
+                batchSelect.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.warn('Could not load batches:', err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadBatchOptions();
+
+    // Check if date or batch_id is in query params
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get('date');
+    const batchParam = params.get('batch_id');
+
     if (dateParam) {
         document.getElementById('analysis-date').value = dateParam;
     } else {
-        // Default to latest date from database or today
         document.getElementById('analysis-date').value = '2026-10-05';
     }
-    loadDailyAnalysis();
+
+    if (batchParam) {
+        const batchSelect = document.getElementById('filter-batch-id');
+        if (batchSelect) batchSelect.value = batchParam;
+    }
+
+    await loadDailyAnalysis();
 });

@@ -19,7 +19,9 @@ function switchTab(tabId) {
 async function loadFeedInventory() {
     clearStatus();
     try {
-        inventoryItems = await apiRequest('/api/feed/items');
+        const showArchived = document.getElementById('show-archived-items')?.checked;
+        const url = showArchived ? '/api/feed/items?include_deleted=true' : '/api/feed/items';
+        inventoryItems = await apiRequest(url);
         updateInventoryKPIs();
         renderInventoryTable(inventoryItems);
         populateCategoryFilter();
@@ -35,7 +37,7 @@ function updateInventoryKPIs() {
     let totalVal = 0;
     let lowStockCount = 0;
 
-    inventoryItems.forEach(item => {
+    inventoryItems.filter(i => !i.is_deleted).forEach(item => {
         totalKg += item.current_stock_kg || 0;
         totalVal += item.total_valuation || 0;
         if (item.is_low_stock) {
@@ -48,7 +50,7 @@ function updateInventoryKPIs() {
     document.getElementById('kpi-total-stock').textContent = `${totalMT} MT`;
     document.getElementById('kpi-total-stock-kg').textContent = `${totalKg.toLocaleString()} kg total in stock`;
     document.getElementById('kpi-total-valuation').textContent = `$${totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    document.getElementById('kpi-item-count').textContent = inventoryItems.length;
+    document.getElementById('kpi-item-count').textContent = inventoryItems.filter(i => !i.is_deleted).length;
     document.getElementById('kpi-low-stock').textContent = lowStockCount;
 }
 
@@ -60,13 +62,24 @@ function renderInventoryTable(items) {
     }
 
     tbody.innerHTML = items.map(item => {
+        const isDel = item.is_deleted;
         const isLow = item.is_low_stock;
-        const statusBadge = isLow
+        let statusBadge = isLow
             ? `<span class="badge badge-lowstock">Low Stock (≤ ${item.reorder_level_kg} kg)</span>`
             : `<span class="badge badge-instock">In Stock</span>`;
+        if (isDel) {
+            statusBadge = `<span class="badge" style="background: #fee2e2; color: #991b1b;">Deleted</span>`;
+        }
+
+        const actionHtml = isDel
+            ? `<button type="button" class="btn-sm" style="background: #16a34a; color: white;" onclick="handleRestoreItem(${item.item_id}, '${escapeHtml(item.name)}')">↩️ Restore</button>`
+            : `
+                <button type="button" class="btn-sm btn-warning" onclick="openEditModal(${item.item_id})">Edit</button>
+                <button type="button" class="btn-sm btn-danger" onclick="handleDeleteItem(${item.item_id}, '${escapeHtml(item.name)}')">Delete</button>
+              `;
 
         return `
-            <tr>
+            <tr style="${isDel ? 'opacity: 0.65; background: #fafafa;' : ''}">
                 <td><strong>${escapeHtml(item.name)}</strong></td>
                 <td><span style="color: #486581;">${escapeHtml(item.category || 'General')}</span></td>
                 <td><strong style="color: #102a43;">${(item.current_stock_mt || 0).toFixed(3)} MT</strong></td>
@@ -75,10 +88,7 @@ function renderInventoryTable(items) {
                 <td>$${(item.average_cost_per_mt || 0).toFixed(2)}</td>
                 <td><strong>$${(item.total_valuation || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                 <td>${statusBadge}</td>
-                <td>
-                    <button type="button" class="btn-sm btn-warning" onclick="openEditModal(${item.item_id})">Edit</button>
-                    <button type="button" class="btn-sm btn-danger" onclick="handleDeleteItem(${item.item_id}, '${escapeHtml(item.name)}')">Delete</button>
-                </td>
+                <td>${actionHtml}</td>
             </tr>
         `;
     }).join('');
@@ -233,6 +243,19 @@ async function handleDeleteItem(itemId, itemName) {
     }
 }
 
+async function handleRestoreItem(itemId, itemName) {
+    clearStatus();
+    try {
+        await apiRequest(`/api/feed/items/${itemId}/restore`, {
+            method: 'POST'
+        });
+        setStatus(`Feed ingredient "${itemName}" restored successfully.`);
+        await loadFeedInventory();
+    } catch (err) {
+        setStatus(err.message, 'error');
+    }
+}
+
 // -----------------------------------------------------------------------------
 // RECORD PURCHASE & LIVE PREVIEW
 // -----------------------------------------------------------------------------
@@ -314,10 +337,13 @@ async function handleSavePurchase(e) {
 async function loadPurchases() {
     clearStatus();
     const filterItem = document.getElementById('history-filter-item').value;
-    let url = '/api/feed/purchases';
-    if (filterItem) {
-        url += `?item_id=${filterItem}`;
-    }
+    const showArchived = document.getElementById('show-archived-purchases')?.checked;
+
+    let url = '/api/feed/purchases?';
+    const params = new URLSearchParams();
+    if (filterItem) params.append('item_id', filterItem);
+    if (showArchived) params.append('include_deleted', 'true');
+    url += params.toString();
 
     try {
         allPurchases = await apiRequest(url);
@@ -334,22 +360,30 @@ function renderPurchasesTable(purchases) {
         return;
     }
 
-    tbody.innerHTML = purchases.map(p => `
-        <tr>
-            <td>${p.purchase_date}</td>
-            <td><strong>${escapeHtml(p.item_name || `Item #${p.item_id}`)}</strong></td>
-            <td><strong>${(p.quantity_mt || 0).toFixed(3)} MT</strong></td>
-            <td>${(p.quantity_kg || 0).toLocaleString()} kg</td>
-            <td>$${(p.cost_per_kg || 0).toFixed(4)}</td>
-            <td>$${(p.cost_per_mt || 0).toFixed(2)}</td>
-            <td><strong>$${(p.total_cost || 0).toFixed(2)}</strong></td>
-            <td>${escapeHtml(p.vendor_name || '-')}</td>
-            <td>${escapeHtml(p.invoice_no || '-')}</td>
-            <td>
-                <button type="button" class="btn-sm btn-danger" onclick="handleDeletePurchase(${p.purchase_id})">Delete</button>
-            </td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = purchases.map(p => {
+        const isDel = p.is_deleted;
+        const actionHtml = isDel
+            ? `<button type="button" class="btn-sm" style="background: #16a34a; color: white;" onclick="handleRestorePurchase(${p.purchase_id})">↩️ Restore</button>`
+            : `<button type="button" class="btn-sm btn-danger" onclick="handleDeletePurchase(${p.purchase_id})">Delete</button>`;
+
+        return `
+            <tr style="${isDel ? 'opacity: 0.65; background: #fafafa;' : ''}">
+                <td>${p.purchase_date}</td>
+                <td>
+                    <strong>${escapeHtml(p.item_name || `Item #${p.item_id}`)}</strong>
+                    ${isDel ? '<span class="badge" style="background: #fee2e2; color: #991b1b; margin-left: 6px;">Deleted</span>' : ''}
+                </td>
+                <td><strong>${(p.quantity_mt || 0).toFixed(3)} MT</strong></td>
+                <td>${(p.quantity_kg || 0).toLocaleString()} kg</td>
+                <td>$${(p.cost_per_kg || 0).toFixed(4)}</td>
+                <td>$${(p.cost_per_mt || 0).toFixed(2)}</td>
+                <td><strong>$${(p.total_cost || 0).toFixed(2)}</strong></td>
+                <td>${escapeHtml(p.vendor_name || '-')}</td>
+                <td>${escapeHtml(p.invoice_no || '-')}</td>
+                <td>${actionHtml}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 async function handleDeletePurchase(purchaseId) {
@@ -363,6 +397,20 @@ async function handleDeletePurchase(purchaseId) {
             method: 'DELETE'
         });
         setStatus('Purchase record deleted and stock adjusted.');
+        await loadPurchases();
+        await loadFeedInventory();
+    } catch (err) {
+        setStatus(err.message, 'error');
+    }
+}
+
+async function handleRestorePurchase(purchaseId) {
+    clearStatus();
+    try {
+        await apiRequest(`/api/feed/purchases/${purchaseId}/restore`, {
+            method: 'POST'
+        });
+        setStatus('Purchase record restored and inventory stock re-added.');
         await loadPurchases();
         await loadFeedInventory();
     } catch (err) {

@@ -15,7 +15,22 @@
         <a class="back-link" href="apidocs">API Docs (Swagger)</a>
     </div>
 
-    <!-- Feed Inventory & Egg Cost Analysis Section -->
+    <!-- 1. Flock & Infrastructure Management -->
+    <h2 style="font-size: 1.25rem; color: #102a43; margin-top: 18px; margin-bottom: 12px; border-bottom: 2px solid #805ad5; padding-bottom: 6px;">
+        🐔 Flock & Infrastructure Management
+    </h2>
+    <nav style="margin-bottom: 24px;">
+        <ul class="dashboard-grid">
+            <li>
+                <a href="pages/flock/sheds-and-batches.html" style="border-left: 4px solid #805ad5;">
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">🛖 Sheds & Flock Batches</div>
+                    <div style="font-size: 0.85rem; color: #627d98;">Manage Shed A & B physical capacity, track active flock batches (e.g. 2026-march-a), bird counts, breed, and dynamic age in weeks.</div>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- 2. Feed Inventory & Egg Cost Analysis Section -->
     <h2 style="font-size: 1.25rem; color: #102a43; margin-top: 18px; margin-bottom: 12px; border-bottom: 2px solid #1f6feb; padding-bottom: 6px;">
         🌾 Feed Inventory & Cost-per-Egg Analysis
     </h2>
@@ -23,42 +38,88 @@
         <ul class="dashboard-grid">
             <li>
                 <a href="pages/inventory/feed-inventory.html" style="border-left: 4px solid #1f6feb;">
-                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">📦 Feed Inventory</div>
-                    <div style="font-size: 0.85rem; color: #627d98;">Add, update, delete feed ingredients, monitor stock (MT & kg), and record purchase costs.</div>
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">📦 Feed Inventory & Procurement</div>
+                    <div style="font-size: 0.85rem; color: #627d98;">Monitor feed stock (MT & kg), log purchases, track weighted cost basis, and manage soft-delete archives.</div>
                 </a>
             </li>
             <li>
                 <a href="pages/inventory/daily-feed-production.html" style="border-left: 4px solid #f59e0b;">
                     <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">🌽 Daily Feeding & Egg Ops</div>
-                    <div style="font-size: 0.85rem; color: #627d98;">Log active flock, daily food consumed (MT/kg), eggs produced, and actual eggs sold.</div>
+                    <div style="font-size: 0.85rem; color: #627d98;">Log active flock, batch attribution, food consumed (MT/kg), eggs produced, and actual eggs sold.</div>
                 </a>
             </li>
             <li>
                 <a href="pages/inventory/daily-cost-analysis.html" style="border-left: 4px solid #10b981;">
                     <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">📊 Daily Cost & Profitability Analysis</div>
-                    <div style="font-size: 0.85rem; color: #627d98;">Cost per bird, cost to generate 1 egg, egg selling price vs cost, and realized gross profit.</div>
+                    <div style="font-size: 0.85rem; color: #627d98;">Cost per bird, cost to generate 1 egg, egg selling price vs cost, realized profit, and Shed A vs Shed B performance.</div>
                 </a>
             </li>
         </ul>
     </nav>
 
-    <!-- General Finance & Operations Section -->
-    <h2 style="font-size: 1.25rem; color: #102a43; margin-bottom: 12px; border-bottom: 1px solid #d9e2ec; padding-bottom: 6px;">
+    <!-- 3. Sales, Customers & Financial Operations -->
+    <h2 style="font-size: 1.25rem; color: #102a43; margin-bottom: 12px; border-bottom: 2px solid #0b69a3; padding-bottom: 6px;">
         💼 Sales, Customers & Financial Operations
+    </h2>
+    <nav style="margin-bottom: 24px;">
+        <ul class="dashboard-grid">
+            <li>
+                <a href="pages/finance/sales-finance-hub.html" style="border-left: 4px solid #0b69a3; background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);">
+                    <div style="font-size: 1.15rem; font-weight: bold; margin-bottom: 4px; color: #0b69a3;">⭐ Unified Sales & Finance Hub</div>
+                    <div style="font-size: 0.85rem; color: #486581;">All-in-one command center for Daily Egg Rates, Sales Orders, Customer AR Ledgers, Payments, and Archive Restores.</div>
+                </a>
+            </li>
+            <li>
+                <a href="pages/rates/daily-egg-rates.html">
+                    <div style="font-weight: bold;">Daily Egg Rates</div>
+                    <div style="font-size: 0.8rem; color: #627d98;">Daily NECC & Farm wholesale rate master</div>
+                </a>
+            </li>
+            <li>
+                <a href="pages/orders/new-order.html">
+                    <div style="font-weight: bold;">New Sales Order</div>
+                    <div style="font-size: 0.8rem; color: #627d98;">Record egg deliveries to customers</div>
+                </a>
+            </li>
+            <li>
+                <a href="pages/customers/new-customer.html">
+                    <div style="font-weight: bold;">Customer Master</div>
+                    <div style="font-size: 0.8rem; color: #627d98;">Register and manage buyer accounts</div>
+                </a>
+            </li>
+            <li>
+                <a href="pages/payments/new-payment.html">
+                    <div style="font-weight: bold;">Receive Payment</div>
+                    <div style="font-size: 0.8rem; color: #627d98;">Log customer receipts and clear balances</div>
+                </a>
+            </li>
+            <li>
+                <a href="pages/balances/customer-balance-sheet-summary.html">
+                    <div style="font-weight: bold;">Customer Ledger Summary</div>
+                    <div style="font-size: 0.8rem; color: #627d98;">Accounts Receivable aging and totals</div>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- 4. Farm Incidents & Maintenance -->
+    <h2 style="font-size: 1.25rem; color: #102a43; margin-bottom: 12px; border-bottom: 2px solid #e53e3e; padding-bottom: 6px;">
+        ⚠️ Farm Health, Incidents & Maintenance
     </h2>
     <nav>
         <ul class="dashboard-grid">
-            <li><a href="pages/products/new-product.html">Add Product / Rate</a></li>
-            <li><a href="pages/customers/new-customer.html">Add Customer</a></li>
-            <li><a href="pages/orders/new-order.html">Add Order (Sales)</a></li>
-            <li><a href="pages/payments/new-payment.html">Add Payment</a></li>
-            <li><a href="pages/incidents/new-incident.html">Create Incident</a></li>
-            <li><a href="pages/incidents/incident-tracking.html">Incident Tracking</a></li>
-            <li><a href="pages/balances/customer-balance-sheet-summary.html">Customer Balance Summary</a></li>
-            <li><a href="pages/balances/customer-balance-sheet-details.html">Customer Balance Details</a></li>
-            <li><a href="pages/transactions/transaction-history.html">Transaction History</a></li>
-            <li><a href="pages/rates/daily-egg-rates.html">Daily Egg Rates</a></li>
-            <li><a href="pages/rates/egg-rate-history.html">Egg Rate History</a></li>
+            <li>
+                <a href="pages/incidents/incident-tracking.html" style="border-left: 4px solid #e53e3e;">
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">📋 Incident Tracking & Archive</div>
+                    <div style="font-size: 0.85rem; color: #627d98;">Track incidents attributed to Sheds & Batches, review repair expenses, filter archives, and 1-click restore.</div>
+                </a>
+            </li>
+            <li>
+                <a href="pages/incidents/new-incident.html" style="border-left: 4px solid #ed8936;">
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;">➕ Report New Incident</div>
+                    <div style="font-size: 0.85rem; color: #627d98;">Log health issues, electrical or machinery breakdowns with optional Shed & Batch attribution.</div>
+                </a>
+            </li>
         </ul>
     </nav>
 </body>

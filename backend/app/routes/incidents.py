@@ -1,15 +1,23 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
-from ..models import Incident, db
+from ..models import Incident, Shed, FlockBatch, db
+from ..data_layer import (
+    list_records,
+    get_record,
+    create_record,
+    update_record,
+    soft_delete_record,
+    restore_record,
+    is_bigquery,
+)
 from .helpers import (
-    active_query,
     decimal_value,
+    int_value,
     mark_updated,
     parse_date,
     request_data,
     require_fields,
 )
-
 
 VALID_INCIDENT_TYPES = {"hens", "electric", "machinery", "others"}
 
@@ -27,7 +35,7 @@ def _validate_incident_type(value):
 @incidents_bp.route("/", methods=["GET"])
 def get_incidents():
     """
-    List incidents
+    List incidents with optional shed/batch filtering and archive view
     ---
     tags:
       - Incidents
@@ -36,15 +44,42 @@ def get_incidents():
         name: include_deleted
         type: boolean
         required: false
+      - in: query
+        name: deleted_only
+        type: boolean
+        required: false
+      - in: query
+        name: shed_id
+        type: integer
+        required: false
+      - in: query
+        name: batch_id
+        type: integer
+        required: false
+      - in: query
+        name: incident_type
+        type: string
+        required: false
     responses:
       200:
         description: Incident list ordered by incident date descending
     """
-    incidents = active_query(Incident).order_by(
-        Incident.incident_date.desc(),
-        Incident.incident_id.desc(),
-    ).all()
-    return jsonify([incident.as_dict() for incident in incidents])
+    filters = {}
+    if request.args.get("shed_id"):
+        filters["shed_id"] = int(request.args.get("shed_id"))
+    if request.args.get("batch_id"):
+        filters["batch_id"] = int(request.args.get("batch_id"))
+    if request.args.get("incident_type"):
+        filters["incident_type"] = request.args.get("incident_type")
+
+    incidents = list_records(
+        table_name="incidents",
+        model_class=Incident,
+        filters=filters if filters else None,
+        order_by="incident_date DESC, incident_id DESC",
+        default_order=Incident.incident_date.desc(),
+    )
+    return jsonify(incidents)
 
 
 @incidents_bp.route("/<int:incident_id>", methods=["GET"])
@@ -65,14 +100,16 @@ def get_incident(incident_id):
       404:
         description: Incident not found
     """
-    incident = Incident.query.get_or_404(incident_id)
-    return jsonify(incident.as_dict())
+    incident = get_record("incidents", Incident, "incident_id", incident_id)
+    if not incident:
+        return jsonify({"error": "Incident not found"}), 404
+    return jsonify(incident)
 
 
 @incidents_bp.route("/", methods=["POST"])
 def add_incident():
     """
-    Create an incident
+    Create an incident with optional Shed and Batch attribution
     ---
     tags:
       - Incidents
@@ -101,6 +138,12 @@ def add_incident():
               type: string
             amount_spent:
               type: number
+            shed_id:
+              type: integer
+              description: Optional affected shed ID
+            batch_id:
+              type: integer
+              description: Optional affected flock batch ID
             created_by:
               type: string
     responses:
@@ -127,17 +170,24 @@ def add_incident():
     if error:
         return error
 
-    incident = Incident(
-        name=data["name"],
-        incident_type=data["incident_type"],
-        incident_date=incident_date,
-        summary=data.get("summary"),
-        amount_spent=amount_spent,
-        created_by=data["created_by"],
-    )
-    db.session.add(incident)
-    db.session.commit()
-    return jsonify(incident.as_dict()), 201
+    shed_id = int(data["shed_id"]) if data.get("shed_id") else None
+    batch_id = int(data["batch_id"]) if data.get("batch_id") else None
+    created_by = (data.get("created_by") or "system").strip()
+
+    row_data = {
+        "name": data["name"].strip(),
+        "incident_type": data["incident_type"],
+        "incident_date": incident_date,
+        "summary": data.get("summary"),
+        "amount_spent": amount_spent,
+        "shed_id": shed_id,
+        "batch_id": batch_id,
+        "created_by": created_by,
+        "updated_by": created_by,
+    }
+
+    created = create_record("incidents", Incident, "incident_id", row_data)
+    return jsonify(created), 201
 
 
 @incidents_bp.route("/<int:incident_id>", methods=["PUT"])
@@ -156,52 +206,51 @@ def update_incident(incident_id):
         name: incident
         schema:
           type: object
-          properties:
-            name:
-              type: string
-            incident_type:
-              type: string
-              enum: [hens, electric, machinery, others]
-            incident_date:
-              type: string
-              format: date
-            summary:
-              type: string
-            amount_spent:
-              type: number
-            updated_by:
-              type: string
     responses:
       200:
         description: Incident updated
+      404:
+        description: Incident not found
     """
-    incident = Incident.query.get_or_404(incident_id)
     data, error = request_data()
     if error:
         return error
 
+    updates = {}
     if "incident_type" in data:
         error = _validate_incident_type(data["incident_type"])
         if error:
             return error
-        incident.incident_type = data["incident_type"]
+        updates["incident_type"] = data["incident_type"]
 
-    incident_date, error = parse_date(data.get("incident_date"), "incident_date")
-    if error:
-        return error
-    if incident_date:
-        incident.incident_date = incident_date
-
-    if "amount_spent" in data:
-        incident.amount_spent, error = decimal_value(data["amount_spent"], "amount_spent")
+    if "incident_date" in data:
+        incident_date, error = parse_date(data.get("incident_date"), "incident_date")
         if error:
             return error
+        if incident_date:
+            updates["incident_date"] = incident_date
 
-    incident.name = data.get("name", incident.name)
-    incident.summary = data.get("summary", incident.summary)
-    mark_updated(incident, data.get("updated_by"))
-    db.session.commit()
-    return jsonify(incident.as_dict())
+    if "amount_spent" in data:
+        amount_spent, error = decimal_value(data["amount_spent"], "amount_spent")
+        if error:
+            return error
+        updates["amount_spent"] = amount_spent
+
+    if "name" in data:
+        updates["name"] = data["name"].strip()
+    if "summary" in data:
+        updates["summary"] = data["summary"]
+    if "shed_id" in data:
+        updates["shed_id"] = int(data["shed_id"]) if data["shed_id"] else None
+    if "batch_id" in data:
+        updates["batch_id"] = int(data["batch_id"]) if data["batch_id"] else None
+    if "updated_by" in data:
+        updates["updated_by"] = data["updated_by"]
+
+    updated = update_record("incidents", Incident, "incident_id", incident_id, updates)
+    if not updated:
+        return jsonify({"error": "Incident not found"}), 404
+    return jsonify(updated)
 
 
 @incidents_bp.route("/<int:incident_id>", methods=["DELETE"])
@@ -218,10 +267,34 @@ def delete_incident(incident_id):
         required: true
     responses:
       200:
-        description: Incident deleted
+        description: Incident soft-deleted
     """
-    incident = Incident.query.get_or_404(incident_id)
-    incident.is_deleted = True
-    mark_updated(incident)
-    db.session.commit()
-    return jsonify({"message": "Incident deleted"}), 200
+    deleted_by = request.args.get("deleted_by", "system")
+    success = soft_delete_record("incidents", Incident, "incident_id", incident_id, deleted_by)
+    if not success:
+        return jsonify({"error": "Incident not found"}), 404
+    return jsonify({"message": "Incident archived successfully", "incident_id": incident_id}), 200
+
+
+@incidents_bp.route("/<int:incident_id>/restore", methods=["POST"])
+def restore_incident(incident_id):
+    """
+    Restore an archived incident
+    ---
+    tags:
+      - Incidents
+    parameters:
+      - in: path
+        name: incident_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Incident restored
+      404:
+        description: Incident not found
+    """
+    restored = restore_record("incidents", Incident, "incident_id", incident_id)
+    if not restored:
+        return jsonify({"error": "Incident not found"}), 404
+    return jsonify({"message": "Incident restored successfully", "incident": restored}), 200

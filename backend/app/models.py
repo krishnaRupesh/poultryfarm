@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from flask_sqlalchemy import SQLAlchemy
 
@@ -23,6 +23,8 @@ class AuditMixin:
     created_by = db.Column(db.String(255), nullable=False)
     updated_by = db.Column(db.String(255))
     is_deleted = db.Column(db.Boolean, default=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+    deleted_by = db.Column(db.String(255), nullable=True)
 
 
 class Product(db.Model):
@@ -149,6 +151,97 @@ class Payment(db.Model, AuditMixin):
         }
 
 
+class Shed(db.Model, AuditMixin):
+    __tablename__ = "sheds"
+
+    shed_id = db.Column(db.Integer, primary_key=True)
+    shed_name = db.Column(db.String(100), nullable=False, unique=True)
+    capacity = db.Column(db.Integer, nullable=False, default=10000)
+    shed_type = db.Column(db.String(50), default="Layer")
+    status = db.Column(db.String(50), default="Active")
+    location = db.Column(db.String(255))
+    description = db.Column(db.Text)
+
+    batches = db.relationship("FlockBatch", back_populates="shed", lazy="dynamic")
+
+    def as_dict(self):
+        active_batch = self.batches.filter_by(is_deleted=False, status="Active").first()
+        return {
+            "shed_id": self.shed_id,
+            "shed_name": self.shed_name,
+            "capacity": self.capacity,
+            "shed_type": self.shed_type,
+            "status": self.status,
+            "location": self.location,
+            "description": self.description,
+            "active_batch_id": active_batch.batch_id if active_batch else None,
+            "active_batch_name": active_batch.batch_name if active_batch else None,
+            "active_birds": active_batch.current_birds if active_batch else 0,
+            "created_at": _datetime_or_none(self.created_at),
+            "updated_at": _datetime_or_none(self.updated_at),
+            "created_by": self.created_by,
+            "updated_by": self.updated_by,
+            "is_deleted": self.is_deleted,
+            "deleted_at": _datetime_or_none(self.deleted_at),
+            "deleted_by": self.deleted_by,
+        }
+
+
+class FlockBatch(db.Model, AuditMixin):
+    __tablename__ = "flock_batches"
+
+    batch_id = db.Column(db.Integer, primary_key=True)
+    batch_name = db.Column(db.String(100), nullable=False, unique=True)
+    shed_id = db.Column(db.Integer, db.ForeignKey("sheds.shed_id"), nullable=True)
+    breed = db.Column(db.String(100), default="Layer (BV300)")
+    bird_type = db.Column(db.String(50), default="Layer")
+    placement_date = db.Column(db.Date, nullable=False)
+    initial_birds = db.Column(db.Integer, nullable=False)
+    current_birds = db.Column(db.Integer, nullable=False)
+    initial_age_weeks = db.Column(db.Integer, default=18)
+    status = db.Column(db.String(50), default="Active")
+    depletion_date = db.Column(db.Date, nullable=True)
+    remarks = db.Column(db.Text)
+
+    shed = db.relationship("Shed", back_populates="batches")
+
+    @property
+    def age_weeks(self):
+        if not self.placement_date:
+            return self.initial_age_weeks or 0
+        days = (date.today() - self.placement_date).days
+        return (self.initial_age_weeks or 0) + max(0, days // 7)
+
+    def as_dict(self):
+        mortality_count = max(0, (self.initial_birds or 0) - (self.current_birds or 0))
+        mortality_pct = round((mortality_count / self.initial_birds) * 100, 2) if self.initial_birds > 0 else 0.0
+        return {
+            "batch_id": self.batch_id,
+            "batch_name": self.batch_name,
+            "shed_id": self.shed_id,
+            "shed_name": self.shed.shed_name if self.shed else None,
+            "breed": self.breed,
+            "bird_type": self.bird_type,
+            "placement_date": _date_or_none(self.placement_date),
+            "initial_birds": self.initial_birds,
+            "current_birds": self.current_birds,
+            "initial_age_weeks": self.initial_age_weeks or 18,
+            "age_weeks": self.age_weeks,
+            "mortality_count": mortality_count,
+            "mortality_pct": mortality_pct,
+            "status": self.status,
+            "depletion_date": _date_or_none(self.depletion_date),
+            "remarks": self.remarks,
+            "created_at": _datetime_or_none(self.created_at),
+            "updated_at": _datetime_or_none(self.updated_at),
+            "created_by": self.created_by,
+            "updated_by": self.updated_by,
+            "is_deleted": self.is_deleted,
+            "deleted_at": _datetime_or_none(self.deleted_at),
+            "deleted_by": self.deleted_by,
+        }
+
+
 class Incident(db.Model, AuditMixin):
     __tablename__ = "incidents"
 
@@ -158,6 +251,11 @@ class Incident(db.Model, AuditMixin):
     incident_date = db.Column(db.Date, nullable=False)
     summary = db.Column(db.Text)
     amount_spent = db.Column(db.Numeric(10, 2), nullable=False)
+    shed_id = db.Column(db.Integer, db.ForeignKey("sheds.shed_id"), nullable=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey("flock_batches.batch_id"), nullable=True)
+
+    shed = db.relationship("Shed")
+    batch = db.relationship("FlockBatch")
 
     def as_dict(self):
         return {
@@ -167,11 +265,17 @@ class Incident(db.Model, AuditMixin):
             "incident_date": _date_or_none(self.incident_date),
             "summary": self.summary,
             "amount_spent": _money_or_none(self.amount_spent),
+            "shed_id": self.shed_id,
+            "shed_name": self.shed.shed_name if self.shed else None,
+            "batch_id": self.batch_id,
+            "batch_name": self.batch.batch_name if self.batch else None,
             "created_at": _datetime_or_none(self.created_at),
             "updated_at": _datetime_or_none(self.updated_at),
             "created_by": self.created_by,
             "updated_by": self.updated_by,
             "is_deleted": self.is_deleted,
+            "deleted_at": _datetime_or_none(self.deleted_at),
+            "deleted_by": self.deleted_by,
         }
 
 
@@ -280,15 +384,24 @@ class DailyFlockStatus(db.Model, AuditMixin):
     __tablename__ = "daily_flock_status"
 
     status_id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False, unique=True)
+    date = db.Column(db.Date, nullable=False)
+    shed_id = db.Column(db.Integer, db.ForeignKey("sheds.shed_id"), nullable=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey("flock_batches.batch_id"), nullable=True)
     active_birds = db.Column(db.Integer, nullable=False)
     mortality = db.Column(db.Integer, default=0)
     remarks = db.Column(db.Text)
+
+    shed = db.relationship("Shed")
+    batch = db.relationship("FlockBatch")
 
     def as_dict(self):
         return {
             "status_id": self.status_id,
             "date": _date_or_none(self.date),
+            "shed_id": self.shed_id,
+            "shed_name": self.shed.shed_name if self.shed else None,
+            "batch_id": self.batch_id,
+            "batch_name": self.batch.batch_name if self.batch else None,
             "active_birds": self.active_birds,
             "mortality": self.mortality or 0,
             "remarks": self.remarks,
@@ -297,6 +410,8 @@ class DailyFlockStatus(db.Model, AuditMixin):
             "created_by": self.created_by,
             "updated_by": self.updated_by,
             "is_deleted": self.is_deleted,
+            "deleted_at": _datetime_or_none(self.deleted_at),
+            "deleted_by": self.deleted_by,
         }
 
 
@@ -306,12 +421,16 @@ class DailyFeedConsumption(db.Model, AuditMixin):
     consumption_id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False)
     item_id = db.Column(db.Integer, db.ForeignKey("feed_items.item_id"), nullable=False)
+    shed_id = db.Column(db.Integer, db.ForeignKey("sheds.shed_id"), nullable=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey("flock_batches.batch_id"), nullable=True)
     quantity_kg = db.Column(db.Numeric(12, 2), nullable=False)
     cost_per_kg = db.Column(db.Numeric(10, 4), nullable=False)
     total_cost = db.Column(db.Numeric(12, 2), nullable=False)
     remarks = db.Column(db.Text)
 
     item = db.relationship("FeedItem", back_populates="consumptions")
+    shed = db.relationship("Shed")
+    batch = db.relationship("FlockBatch")
 
     def as_dict(self):
         qty_kg = float(self.quantity_kg or 0.0)
@@ -322,6 +441,10 @@ class DailyFeedConsumption(db.Model, AuditMixin):
             "item_id": self.item_id,
             "item_name": self.item.name if self.item else None,
             "category": self.item.category if self.item else None,
+            "shed_id": self.shed_id,
+            "shed_name": self.shed.shed_name if self.shed else None,
+            "batch_id": self.batch_id,
+            "batch_name": self.batch.batch_name if self.batch else None,
             "quantity_kg": qty_kg,
             "quantity_mt": round(qty_kg / 1000.0, 3),
             "cost_per_kg": c_kg,
@@ -333,6 +456,8 @@ class DailyFeedConsumption(db.Model, AuditMixin):
             "created_by": self.created_by,
             "updated_by": self.updated_by,
             "is_deleted": self.is_deleted,
+            "deleted_at": _datetime_or_none(self.deleted_at),
+            "deleted_by": self.deleted_by,
         }
 
 
@@ -340,7 +465,9 @@ class DailyEggOperation(db.Model, AuditMixin):
     __tablename__ = "daily_egg_operations"
 
     record_id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False, unique=True)
+    date = db.Column(db.Date, nullable=False)
+    shed_id = db.Column(db.Integer, db.ForeignKey("sheds.shed_id"), nullable=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey("flock_batches.batch_id"), nullable=True)
     opening_stock = db.Column(db.Integer, default=0)
     eggs_produced = db.Column(db.Integer, nullable=False)
     damaged_eggs = db.Column(db.Integer, default=0)
@@ -351,10 +478,17 @@ class DailyEggOperation(db.Model, AuditMixin):
     actual_revenue = db.Column(db.Numeric(12, 2), nullable=False)
     remarks = db.Column(db.Text)
 
+    shed = db.relationship("Shed")
+    batch = db.relationship("FlockBatch")
+
     def as_dict(self):
         return {
             "record_id": self.record_id,
             "date": _date_or_none(self.date),
+            "shed_id": self.shed_id,
+            "shed_name": self.shed.shed_name if self.shed else None,
+            "batch_id": self.batch_id,
+            "batch_name": self.batch.batch_name if self.batch else None,
             "opening_stock": self.opening_stock or 0,
             "eggs_produced": self.eggs_produced,
             "damaged_eggs": self.damaged_eggs or 0,
@@ -369,6 +503,8 @@ class DailyEggOperation(db.Model, AuditMixin):
             "created_by": self.created_by,
             "updated_by": self.updated_by,
             "is_deleted": self.is_deleted,
+            "deleted_at": _datetime_or_none(self.deleted_at),
+            "deleted_by": self.deleted_by,
         }
 
 

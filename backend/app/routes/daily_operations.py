@@ -45,16 +45,25 @@ def get_flock():
         description: Flock count details
     """
     target_date = request.args.get("date")
+    batch_id = request.args.get("batch_id")
+    shed_id = request.args.get("shed_id")
+
+    base_q = active_query(DailyFlockStatus)
+    if batch_id:
+        base_q = base_q.filter_by(batch_id=batch_id)
+    elif shed_id:
+        base_q = base_q.filter_by(shed_id=shed_id)
+
     if target_date:
         d, err = parse_date(target_date, "date")
         if err:
             return err
-        flock = active_query(DailyFlockStatus).filter_by(date=d).first()
+        flock = base_q.filter_by(date=d).first()
         if flock:
             return jsonify(flock.as_dict())
         # If no specific record for target_date, find the most recent prior date
         latest = (
-            active_query(DailyFlockStatus)
+            base_q
             .filter(DailyFlockStatus.date <= d)
             .order_by(DailyFlockStatus.date.desc())
             .first()
@@ -64,7 +73,7 @@ def get_flock():
         return jsonify({"date": str(d), "active_birds": 0, "mortality": 0, "status_id": None})
 
     # Return list of all flock records
-    records = active_query(DailyFlockStatus).order_by(DailyFlockStatus.date.desc()).all()
+    records = base_q.order_by(DailyFlockStatus.date.desc()).all()
     return jsonify([r.as_dict() for r in records])
 
 
@@ -135,12 +144,28 @@ def record_flock():
 
     remarks = data.get("remarks")
     created_by = (data.get("created_by") or "system").strip()
+    batch_id = data.get("batch_id")
+    shed_id = data.get("shed_id")
+    if batch_id:
+        batch_id, _ = int_value(batch_id, "batch_id")
+    if shed_id:
+        shed_id, _ = int_value(shed_id, "shed_id")
 
-    existing = DailyFlockStatus.query.filter_by(date=flock_date, is_deleted=False).first()
+    query = DailyFlockStatus.query.filter_by(date=flock_date, is_deleted=False)
+    if batch_id:
+        query = query.filter_by(batch_id=batch_id)
+    elif shed_id:
+        query = query.filter_by(shed_id=shed_id)
+    existing = query.first()
+
     if existing:
         existing.active_birds = active_birds
         existing.mortality = mortality
         existing.remarks = remarks
+        if batch_id is not None:
+            existing.batch_id = batch_id
+        if shed_id is not None:
+            existing.shed_id = shed_id
         mark_updated(existing, updated_by=created_by)
         db.session.commit()
         return jsonify(existing.as_dict())
@@ -150,6 +175,8 @@ def record_flock():
         active_birds=active_birds,
         mortality=mortality,
         remarks=remarks,
+        batch_id=batch_id,
+        shed_id=shed_id,
         created_by=created_by,
         updated_by=created_by,
     )
@@ -195,6 +222,14 @@ def get_feed_consumption():
     item_id = request.args.get("item_id")
     if item_id:
         query = query.filter_by(item_id=item_id)
+
+    batch_id = request.args.get("batch_id")
+    if batch_id:
+        query = query.filter_by(batch_id=batch_id)
+
+    shed_id = request.args.get("shed_id")
+    if shed_id:
+        query = query.filter_by(shed_id=shed_id)
 
     records = query.order_by(DailyFeedConsumption.date.desc(), DailyFeedConsumption.consumption_id.desc()).all()
     return jsonify([r.as_dict() for r in records])
@@ -306,12 +341,21 @@ def record_feed_consumption():
         item.current_stock_kg = max(Decimal("0.0"), (item.current_stock_kg or Decimal("0.0")) - quantity_kg)
         mark_updated(item, updated_by=created_by)
 
+        b_id = item_entry.get("batch_id") or data.get("batch_id")
+        s_id = item_entry.get("shed_id") or data.get("shed_id")
+        if b_id:
+            b_id, _ = int_value(b_id, "batch_id")
+        if s_id:
+            s_id, _ = int_value(s_id, "shed_id")
+
         record = DailyFeedConsumption(
             date=consumption_date,
             item_id=item.item_id,
             quantity_kg=quantity_kg,
             cost_per_kg=cost_per_kg,
             total_cost=total_cost,
+            batch_id=b_id,
+            shed_id=s_id,
             remarks=item_entry.get("remarks"),
             created_by=created_by,
             updated_by=created_by,
@@ -352,9 +396,47 @@ def delete_feed_consumption(consumption_id):
         mark_updated(item, updated_by="system")
 
     rec.is_deleted = True
+    rec.deleted_at = datetime.utcnow()
+    rec.deleted_by = request.args.get("deleted_by", "system")
     mark_updated(rec, updated_by="system")
     db.session.commit()
     return jsonify({"message": "Feed consumption record deleted", "consumption_id": consumption_id})
+
+
+@daily_operations_bp.route("/consumption/<int:consumption_id>/restore", methods=["POST"])
+def restore_feed_consumption(consumption_id):
+    """
+    Restore an archived feed consumption entry and deduct stock again
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: path
+        name: consumption_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Consumption record restored
+      404:
+        description: Consumption record not found
+    """
+    rec = DailyFeedConsumption.query.filter_by(consumption_id=consumption_id).first()
+    if not rec:
+        return jsonify({"error": "Consumption record not found"}), 404
+
+    # Re-deduct inventory stock
+    item = rec.item
+    if item:
+        item.current_stock_kg = max(Decimal("0.0"), (item.current_stock_kg or Decimal("0.0")) - rec.quantity_kg)
+        mark_updated(item, updated_by="system")
+
+    rec.is_deleted = False
+    rec.deleted_at = None
+    rec.deleted_by = None
+    mark_updated(rec, updated_by="system")
+    db.session.commit()
+    return jsonify({"message": "Feed consumption record restored", "record": rec.as_dict()})
 
 
 # -----------------------------------------------------------------------------
@@ -450,6 +532,14 @@ def get_egg_operations():
         d, err = parse_date(end_date, "end_date")
         if not err and d:
             query = query.filter(DailyEggOperation.date <= d)
+
+    batch_id = request.args.get("batch_id")
+    if batch_id:
+        query = query.filter_by(batch_id=batch_id)
+
+    shed_id = request.args.get("shed_id")
+    if shed_id:
+        query = query.filter_by(shed_id=shed_id)
 
     records = query.order_by(DailyEggOperation.date.desc()).all()
     return jsonify([r.as_dict() for r in records])
@@ -598,8 +688,20 @@ def record_egg_operations():
     actual_revenue = round(Decimal(str(eggs_sold)) * egg_price_per_unit, 2)
     remarks = data.get("remarks")
     created_by = (data.get("created_by") or "system").strip()
+    batch_id = data.get("batch_id")
+    shed_id = data.get("shed_id")
+    if batch_id:
+        batch_id, _ = int_value(batch_id, "batch_id")
+    if shed_id:
+        shed_id, _ = int_value(shed_id, "shed_id")
 
-    existing = DailyEggOperation.query.filter_by(date=op_date, is_deleted=False).first()
+    query = DailyEggOperation.query.filter_by(date=op_date, is_deleted=False)
+    if batch_id:
+        query = query.filter_by(batch_id=batch_id)
+    elif shed_id:
+        query = query.filter_by(shed_id=shed_id)
+    existing = query.first()
+
     if existing:
         existing.opening_stock = opening_stock
         existing.eggs_produced = eggs_produced
@@ -610,6 +712,10 @@ def record_egg_operations():
         existing.egg_price_per_unit = egg_price_per_unit
         existing.actual_revenue = actual_revenue
         existing.remarks = remarks
+        if batch_id is not None:
+            existing.batch_id = batch_id
+        if shed_id is not None:
+            existing.shed_id = shed_id
         mark_updated(existing, updated_by=created_by)
         db.session.commit()
         return jsonify(existing.as_dict())
@@ -624,6 +730,8 @@ def record_egg_operations():
         closing_stock=closing_stock,
         egg_price_per_unit=egg_price_per_unit,
         actual_revenue=actual_revenue,
+        batch_id=batch_id,
+        shed_id=shed_id,
         remarks=remarks,
         created_by=created_by,
         updated_by=created_by,
@@ -656,6 +764,37 @@ def delete_egg_operations(record_id):
         return jsonify({"error": "Record not found"}), 404
 
     rec.is_deleted = True
+    rec.deleted_at = datetime.utcnow()
+    rec.deleted_by = request.args.get("deleted_by", "system")
     mark_updated(rec, updated_by="system")
     db.session.commit()
     return jsonify({"message": "Egg operations record deleted", "record_id": record_id})
+
+
+@daily_operations_bp.route("/egg-operations/<int:record_id>/restore", methods=["POST"])
+def restore_egg_operations(record_id):
+    """
+    Restore an archived egg operations record
+    ---
+    tags:
+      - Daily Operations
+    parameters:
+      - in: path
+        name: record_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Record restored
+      404:
+        description: Record not found
+    """
+    rec = DailyEggOperation.query.filter_by(record_id=record_id).first()
+    if not rec:
+        return jsonify({"error": "Record not found"}), 404
+    rec.is_deleted = False
+    rec.deleted_at = None
+    rec.deleted_by = None
+    mark_updated(rec, updated_by="system")
+    db.session.commit()
+    return jsonify({"message": "Egg operations record restored", "record": rec.as_dict()})

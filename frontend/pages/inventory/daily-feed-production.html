@@ -38,8 +38,22 @@
         <!-- 1. FLOCK BIRD COUNT -->
         <div class="panel">
             <h2 style="font-size: 1.15rem; color: #102a43; border-bottom: 1px solid #d9e2ec; padding-bottom: 8px; margin-bottom: 14px;">
-                🐔 1. Flock Count (Active Birds)
+                🐔 1. Flock Count & Batch Attribution
             </h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="flock-batch-id">Select Flock Batch</label>
+                    <select id="flock-batch-id" onchange="handleBatchSelectionChange()">
+                        <option value="">-- Farm-Wide / Overall Flock --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="flock-shed-id">Assigned Shed</label>
+                    <select id="flock-shed-id">
+                        <option value="">-- Auto-detected / General Farm --</option>
+                    </select>
+                </div>
+            </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="active-birds">Live Active Birds Today *</label>

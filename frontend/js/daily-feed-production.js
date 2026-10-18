@@ -1,5 +1,7 @@
 let feedInventory = [];
 let feedRowIndex = 0;
+let allBatches = [];
+let allSheds = [];
 
 function setTodayDate() {
     document.getElementById('operation-date').value = today();
@@ -8,10 +10,55 @@ function setTodayDate() {
 
 async function loadFeedInventoryMaster() {
     try {
-        feedInventory = await apiRequest('/api/feed/items');
+        const [items, sheds, batches] = await Promise.all([
+            apiRequest('/api/feed/items'),
+            apiRequest('/api/flock/sheds'),
+            apiRequest('/api/flock/batches')
+        ]);
+        feedInventory = items;
+        allSheds = sheds || [];
+        allBatches = batches || [];
+
+        const batchSelect = document.getElementById('flock-batch-id');
+        if (batchSelect && batchSelect.options.length <= 1) {
+            batches.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.batch_id;
+                opt.textContent = `${b.batch_name} [${b.shed_name || 'No Shed'}] (${b.current_birds || 0} birds, ${b.age_weeks} wks)`;
+                batchSelect.appendChild(opt);
+            });
+        }
+
+        const shedSelect = document.getElementById('flock-shed-id');
+        if (shedSelect && shedSelect.options.length <= 1) {
+            sheds.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.shed_id;
+                opt.textContent = `${s.shed_name} (${s.shed_type || 'General'})`;
+                shedSelect.appendChild(opt);
+            });
+        }
     } catch (err) {
-        setStatus(`Could not load feed inventory: ${err.message}`, 'error');
+        setStatus(`Could not load masters: ${err.message}`, 'error');
     }
+}
+
+function handleBatchSelectionChange() {
+    const batchId = parseInt(document.getElementById('flock-batch-id').value);
+    if (!batchId) {
+        loadDateData();
+        return;
+    }
+    const batch = allBatches.find(b => b.batch_id === batchId);
+    if (batch) {
+        if (batch.shed_id) {
+            document.getElementById('flock-shed-id').value = batch.shed_id;
+        }
+        if (batch.current_birds > 0) {
+            document.getElementById('active-birds').value = batch.current_birds;
+        }
+    }
+    loadDateData();
 }
 
 async function loadDateData() {
@@ -19,24 +66,29 @@ async function loadDateData() {
     const selDate = document.getElementById('operation-date').value;
     if (!selDate) return;
 
-    document.getElementById('view-analysis-link').href = `daily-cost-analysis.html?date=${selDate}`;
+    const selBatch = document.getElementById('flock-batch-id')?.value;
+    const batchQueryParam = selBatch ? `&batch_id=${selBatch}` : '';
+
+    document.getElementById('view-analysis-link').href = `daily-cost-analysis.html?date=${selDate}${selBatch ? `&batch_id=${selBatch}` : ''}`;
 
     try {
         // 1. Fetch flock status for this date
-        const flock = await apiRequest(`/api/daily/flock?date=${selDate}`);
+        const flock = await apiRequest(`/api/daily/flock?date=${selDate}${batchQueryParam}`);
         if (flock && flock.active_birds > 0) {
             document.getElementById('active-birds').value = flock.active_birds;
             document.getElementById('flock-mortality').value = flock.mortality || 0;
             document.getElementById('flock-remarks').value = flock.remarks || '';
+            if (flock.shed_id) document.getElementById('flock-shed-id').value = flock.shed_id;
         } else {
-            // Default to 10,000 if no prior record
-            document.getElementById('active-birds').value = 10000;
+            // Check if batch has current birds
+            const batchObj = selBatch ? allBatches.find(b => b.batch_id === parseInt(selBatch)) : null;
+            document.getElementById('active-birds').value = batchObj ? batchObj.current_birds : 10000;
             document.getElementById('flock-mortality').value = 0;
             document.getElementById('flock-remarks').value = '';
         }
 
         // 2. Fetch feed consumption for this date
-        const consumptions = await apiRequest(`/api/daily/consumption?date=${selDate}`);
+        const consumptions = await apiRequest(`/api/daily/consumption?date=${selDate}${batchQueryParam}`);
         const tbody = document.getElementById('feed-rows-body');
         tbody.innerHTML = '';
         feedRowIndex = 0;
@@ -314,6 +366,11 @@ async function handleSaveDailyOps(e) {
         return;
     }
 
+    const batchVal = document.getElementById('flock-batch-id')?.value;
+    const shedVal = document.getElementById('flock-shed-id')?.value;
+    const batchId = batchVal ? parseInt(batchVal) : null;
+    const shedId = shedVal ? parseInt(shedVal) : null;
+
     try {
         // 1. Save flock count
         await apiRequest('/api/daily/flock', {
@@ -322,6 +379,8 @@ async function handleSaveDailyOps(e) {
                 date: dateVal,
                 active_birds: activeBirds,
                 mortality: mortality,
+                batch_id: batchId,
+                shed_id: shedId,
                 remarks: flockRemarks,
                 created_by: DEFAULT_USER
             })
@@ -333,6 +392,8 @@ async function handleSaveDailyOps(e) {
                 method: 'POST',
                 body: JSON.stringify({
                     date: dateVal,
+                    batch_id: batchId,
+                    shed_id: shedId,
                     items: feedItemsToPost,
                     created_by: DEFAULT_USER
                 })
@@ -350,6 +411,8 @@ async function handleSaveDailyOps(e) {
                 eggs_sold: eggsSold,
                 egg_price_per_unit: eggPrice,
                 price_unit: priceUnit,
+                batch_id: batchId,
+                shed_id: shedId,
                 remarks: eggRemarks,
                 created_by: DEFAULT_USER
             })

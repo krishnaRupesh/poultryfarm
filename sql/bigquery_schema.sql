@@ -79,14 +79,62 @@ CREATE TABLE IF NOT EXISTS `poultry_farm.incidents` (
     incident_date DATE NOT NULL,
     summary STRING,
     amount_spent NUMERIC NOT NULL,
+    shed_id INT64,
+    batch_id INT64,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
     created_by STRING NOT NULL,
     updated_by STRING,
-    is_deleted BOOL DEFAULT FALSE
+    is_deleted BOOL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by STRING
 )
 PARTITION BY incident_date
 CLUSTER BY incident_type;
+
+-- 5A. SHEDS
+CREATE TABLE IF NOT EXISTS `poultry_farm.sheds` (
+    shed_id INT64 NOT NULL,
+    shed_name STRING NOT NULL,
+    capacity INT64 NOT NULL,
+    shed_type STRING DEFAULT 'Layer',
+    status STRING DEFAULT 'Active',
+    location STRING,
+    description STRING,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    created_by STRING NOT NULL,
+    updated_by STRING,
+    is_deleted BOOL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by STRING
+)
+CLUSTER BY status;
+
+-- 5B. FLOCK BATCHES
+CREATE TABLE IF NOT EXISTS `poultry_farm.flock_batches` (
+    batch_id INT64 NOT NULL,
+    batch_name STRING NOT NULL,
+    shed_id INT64,
+    breed STRING DEFAULT 'Layer (BV300)',
+    bird_type STRING DEFAULT 'Layer',
+    placement_date DATE NOT NULL,
+    initial_birds INT64 NOT NULL,
+    current_birds INT64 NOT NULL,
+    initial_age_weeks INT64 DEFAULT 18,
+    status STRING DEFAULT 'Active',
+    depletion_date DATE,
+    remarks STRING,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    created_by STRING NOT NULL,
+    updated_by STRING,
+    is_deleted BOOL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by STRING
+)
+PARTITION BY placement_date
+CLUSTER BY shed_id, status;
 
 -- 6. CUSTOMER BALANCE SUMMARY
 CREATE TABLE IF NOT EXISTS `poultry_farm.customer_balance_summary` (
@@ -147,6 +195,8 @@ CLUSTER BY item_id;
 CREATE TABLE IF NOT EXISTS `poultry_farm.daily_flock_status` (
     status_id INT64 NOT NULL,
     date DATE NOT NULL,
+    shed_id INT64,
+    batch_id INT64,
     active_birds INT64 NOT NULL,
     mortality INT64 DEFAULT 0,
     remarks STRING,
@@ -154,15 +204,20 @@ CREATE TABLE IF NOT EXISTS `poultry_farm.daily_flock_status` (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
     created_by STRING NOT NULL,
     updated_by STRING,
-    is_deleted BOOL DEFAULT FALSE
+    is_deleted BOOL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by STRING
 )
-PARTITION BY date;
+PARTITION BY date
+CLUSTER BY shed_id, batch_id;
 
 -- DAILY FEED CONSUMPTION
 CREATE TABLE IF NOT EXISTS `poultry_farm.daily_feed_consumption` (
     consumption_id INT64 NOT NULL,
     date DATE NOT NULL,
     item_id INT64 NOT NULL,
+    shed_id INT64,
+    batch_id INT64,
     quantity_kg NUMERIC NOT NULL,
     cost_per_kg NUMERIC NOT NULL,
     total_cost NUMERIC NOT NULL,
@@ -171,15 +226,19 @@ CREATE TABLE IF NOT EXISTS `poultry_farm.daily_feed_consumption` (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
     created_by STRING NOT NULL,
     updated_by STRING,
-    is_deleted BOOL DEFAULT FALSE
+    is_deleted BOOL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by STRING
 )
 PARTITION BY date
-CLUSTER BY item_id;
+CLUSTER BY item_id, batch_id;
 
 -- DAILY EGG OPERATIONS
 CREATE TABLE IF NOT EXISTS `poultry_farm.daily_egg_operations` (
     record_id INT64 NOT NULL,
     date DATE NOT NULL,
+    shed_id INT64,
+    batch_id INT64,
     opening_stock INT64 DEFAULT 0,
     eggs_produced INT64 NOT NULL,
     damaged_eggs INT64 DEFAULT 0,
@@ -193,9 +252,12 @@ CREATE TABLE IF NOT EXISTS `poultry_farm.daily_egg_operations` (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
     created_by STRING NOT NULL,
     updated_by STRING,
-    is_deleted BOOL DEFAULT FALSE
+    is_deleted BOOL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    deleted_by STRING
 )
-PARTITION BY date;
+PARTITION BY date
+CLUSTER BY shed_id, batch_id;
 
 -- ---------------------------------------------------------------------------
 -- 8. BIGQUERY ANALYTICAL VIEW: DAILY COST & PROFITABILITY SUMMARY

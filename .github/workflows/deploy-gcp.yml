@@ -22,6 +22,7 @@ env:
   SERVICE_NAME: poultry-farm-app
   ARTIFACT_REPO: poultry-farm-repo
   BIGQUERY_DATASET: poultry_farm
+  RUNTIME_SA_NAME: poultry-cloudrun-sa
 
 jobs:
   deploy:
@@ -90,18 +91,45 @@ jobs:
           echo "Pushing image to Artifact Registry..."
           docker push "$IMAGE_TAG"
 
+      # 6.5 Configure Cloud Run Runtime Service Account with BigQuery Permissions
+      - name: Configure Cloud Run Runtime Service Account
+        run: |
+          RUNTIME_SA_EMAIL="${{ env.RUNTIME_SA_NAME }}@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+          echo "Checking/creating Cloud Run runtime service account: $RUNTIME_SA_EMAIL..."
+
+          gcloud iam service-accounts describe "$RUNTIME_SA_EMAIL" --project=${{ secrets.GCP_PROJECT_ID }} >/dev/null 2>&1 || \
+          gcloud iam service-accounts create ${{ env.RUNTIME_SA_NAME }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --display-name="Poultry Farm Cloud Run Runtime Service Account" || true
+
+          echo "Binding BigQuery Job User (roles/bigquery.jobUser)..."
+          gcloud projects add-iam-policy-binding ${{ secrets.GCP_PROJECT_ID }} \
+            --member="serviceAccount:${RUNTIME_SA_EMAIL}" \
+            --role="roles/bigquery.jobUser" \
+            --condition=None \
+            --quiet || true
+
+          echo "Binding BigQuery Data Editor (roles/bigquery.dataEditor)..."
+          gcloud projects add-iam-policy-binding ${{ secrets.GCP_PROJECT_ID }} \
+            --member="serviceAccount:${RUNTIME_SA_EMAIL}" \
+            --role="roles/bigquery.dataEditor" \
+            --condition=None \
+            --quiet || true
+
       # 7. Deploy to Google Cloud Run (Serverless, scale-to-zero)
       - name: Deploy to Cloud Run
         id: deploy_cloud_run
         env:
           IMAGE_TAG: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
         run: |
-          echo "Deploying service to Cloud Run..."
+          RUNTIME_SA_EMAIL="${{ env.RUNTIME_SA_NAME }}@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+          echo "Deploying service to Cloud Run with runtime service account: $RUNTIME_SA_EMAIL..."
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image "$IMAGE_TAG" \
             --platform managed \
             --region ${{ env.GCP_REGION }} \
             --allow-unauthenticated \
+            --service-account "$RUNTIME_SA_EMAIL" \
             --min-instances 0 \
             --max-instances 5 \
             --memory 512Mi \

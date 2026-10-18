@@ -24,6 +24,16 @@
         <label for="incident-date">Incident Date</label>
         <input type="date" id="incident-date" name="incident-date" required>
 
+        <label for="shed-id">Associated Shed (Optional)</label>
+        <select id="shed-id" name="shed-id">
+            <option value="">-- General Farm Overhead (No Specific Shed) --</option>
+        </select>
+
+        <label for="batch-id">Associated Flock Batch (Optional)</label>
+        <select id="batch-id" name="batch-id">
+            <option value="">-- General / No Specific Batch --</option>
+        </select>
+
         <label for="summary">Summary</label>
         <textarea id="summary" name="summary" maxlength="1000" required></textarea>
 

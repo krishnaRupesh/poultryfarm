@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales & Financial Operations Hub - Poultry Farm</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <style>
+        .finance-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid #d9e2ec;
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 8px 12px 0 12px;
+            border-radius: 6px 6px 0 0;
+        }
+        .tab-btn {
+            background: transparent;
+            color: #486581;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 10px 18px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 0;
+        }
+        .tab-btn:hover {
+            color: #1f6feb;
+            background: #f0f4f8;
+        }
+        .tab-btn.active {
+            color: #1f6feb;
+            border-bottom-color: #1f6feb;
+            background: transparent;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .balance-badge-due {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .balance-badge-clear {
+            background: #dcfce7;
+            color: #166534;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(16, 42, 67, 0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-dialog {
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            width: 100%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div>
+            <h1>💰 Sales, Customers & Financial Operations</h1>
+            <p style="margin: 4px 0 0 0; color: #627d98;">Command center for sales orders, customer receivables, payment collection, and daily egg market pricing.</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a class="back-link" href="../flock/sheds-and-batches.html">🏠 Sheds & Batches</a>
+            <a class="back-link" href="../inventory/daily-cost-analysis.html">📊 Cost Analysis</a>
+            <a class="back-link" href="../../index.html">Dashboard</a>
+        </div>
+    </div>
+
+    <div id="status-message" class="status"></div>
+
+    <!-- Top Executive Financial KPIs -->
+    <div class="kpi-grid" style="margin-bottom: 20px;">
+        <div class="kpi-card">
+            <div class="kpi-title">Today's Sales Revenue</div>
+            <div class="kpi-value" id="kpi-today-sales" style="color: #0b69a3;">$0.00</div>
+            <div class="kpi-sub" id="kpi-today-eggs">0 eggs delivered</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Payments Collected Today</div>
+            <div class="kpi-value" id="kpi-today-collections" style="color: #155724;">$0.00</div>
+            <div class="kpi-sub">Cash, UPI & Bank</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Outstanding Receivables (AR)</div>
+            <div class="kpi-value" id="kpi-total-receivables" style="color: #b7791f;">$0.00</div>
+            <div class="kpi-sub" id="kpi-debtor-count">0 customers with dues</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Today's Egg Market Rate</div>
+            <div class="kpi-value" id="kpi-egg-rate" style="color: #102a43;">$0.000 / egg</div>
+            <div class="kpi-sub" id="kpi-tray-rate">$0.00 / Tray (30 eggs)</div>
+        </div>
+    </div>
+
+    <!-- Tabbed Navigation Bar -->
+    <div class="finance-tabs">
+        <button type="button" class="tab-btn active" onclick="switchTab('orders')">🛒 Sales & Orders</button>
+        <button type="button" class="tab-btn" onclick="switchTab('customers')">👥 Customers & Ledger</button>
+        <button type="button" class="tab-btn" onclick="switchTab('payments')">💳 Payment Collections</button>
+        <button type="button" class="tab-btn" onclick="switchTab('rates')">📈 Daily Egg Rates</button>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: SALES & ORDERS -->
+    <!-- ===================================================================== -->
+    <div id="tab-orders" class="tab-content active">
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d9e2ec; padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h2 style="margin: 0; font-size: 1.15rem;">Sales Orders</h2>
+                    <input type="text" id="order-search" placeholder="Search customer or order..." style="width: 200px; margin: 0;" oninput="filterOrders()">
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; font-weight: normal; cursor: pointer;">
+                        <input type="checkbox" id="show-archived-orders" style="width: auto; margin: 0;" onchange="loadOrders()">
+                        Show Archived
+                    </label>
+                    <button type="button" onclick="openOrderModal()">+ New Egg Sale (Order)</button>
+                </div>
+            </div>
+
+            <table style="margin-top: 14px;">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Quantity (Eggs / Trays)</th>
+                        <th>Unit Price</th>
+                        <th>Total Amount</th>
+                        <th>Remarks</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-table-body">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: CUSTOMERS & AR LEDGER -->
+    <!-- ===================================================================== -->
+    <div id="tab-customers" class="tab-content">
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d9e2ec; padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h2 style="margin: 0; font-size: 1.15rem;">Customer Accounts Receivable</h2>
+                    <input type="text" id="customer-search" placeholder="Search name or phone..." style="width: 200px; margin: 0;" oninput="filterCustomers()">
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; font-weight: normal; cursor: pointer;">
+                        <input type="checkbox" id="show-archived-customers" style="width: auto; margin: 0;" onchange="loadCustomers()">
+                        Show Archived
+                    </label>
+                    <button type="button" onclick="openCustomerModal()">+ Register Customer</button>
+                </div>
+            </div>
+
+            <table style="margin-top: 14px;">
+                <thead>
+                    <tr>
+                        <th>Customer Name</th>
+                        <th>Contact / Phone</th>
+                        <th>Location</th>
+                        <th>Total Billed</th>
+                        <th>Total Paid</th>
+                        <th>Outstanding Balance</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="customers-table-body">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: PAYMENTS & RECEIPTS -->
+    <!-- ===================================================================== -->
+    <div id="tab-payments" class="tab-content">
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d9e2ec; padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h2 style="margin: 0; font-size: 1.15rem;">Payment Collection Receipts</h2>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; font-weight: normal; cursor: pointer;">
+                        <input type="checkbox" id="show-archived-payments" style="width: auto; margin: 0;" onchange="loadPayments()">
+                        Show Archived
+                    </label>
+                    <button type="button" onclick="openPaymentModal()">+ Record Payment Receipt</button>
+                </div>
+            </div>
+
+            <table style="margin-top: 14px;">
+                <thead>
+                    <tr>
+                        <th>Receipt #</th>
+                        <th>Payment Date</th>
+                        <th>Customer</th>
+                        <th>Amount Paid</th>
+                        <th>Mode</th>
+                        <th>Remarks</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="payments-table-body">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 4: DAILY EGG RATES -->
+    <!-- ===================================================================== -->
+    <div id="tab-rates" class="tab-content">
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d9e2ec; padding-bottom: 10px;">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.15rem;">Egg Market Pricing & Rates</h2>
+                    <span style="font-size: 0.85rem; color: #627d98;">Manage daily benchmark egg selling prices</span>
+                </div>
+                <button type="button" onclick="openProductRateModal()">+ Set Today's Egg Rate</button>
+            </div>
+
+            <table style="margin-top: 14px;">
+                <thead>
+                    <tr>
+                        <th>Effective Date</th>
+                        <th>Product / Grade</th>
+                        <th>Price per Single Egg</th>
+                        <th>Price per Tray (30 Eggs)</th>
+                        <th>Price per 100 Eggs</th>
+                        <th>Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody id="rates-table-body">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODALS -->
+    <!-- ===================================================================== -->
+
+    <!-- Modal: New Order (Sale) -->
+    <div class="modal-overlay" id="order-modal">
+        <div class="modal-dialog">
+            <h2 id="order-modal-title" style="margin-top: 0; margin-bottom: 14px;">Record Egg Sale</h2>
+            <form id="order-form" onsubmit="handleSaveOrder(event)">
+                <input type="hidden" id="order-id">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="order-date">Sale / Delivery Date *</label>
+                        <input type="date" id="order-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="order-customer-id">Customer *</label>
+                        <select id="order-customer-id" required onchange="onCustomerSelectChange()">
+                            <!-- Options populated by JS -->
+                        </select>
+                        <span id="customer-balance-hint" style="font-size: 0.78rem; color: #627d98;"></span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="order-product-id">Product Grade *</label>
+                        <select id="order-product-id" required onchange="onProductSelectChange()">
+                            <!-- Options populated by JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="order-unit-type">Quantity Unit</label>
+                        <select id="order-unit-type" onchange="calculateOrderTotal()">
+                            <option value="eggs">Individual Eggs</option>
+                            <option value="trays">Trays (30 Eggs each)</option>
+                            <option value="hundreds">Per 100 Eggs</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="order-quantity">Quantity *</label>
+                        <input type="number" id="order-quantity" required min="1" placeholder="e.g. 100 trays or 3000 eggs" oninput="calculateOrderTotal()">
+                        <span id="calculated-total-eggs" style="font-size: 0.78rem; color: #0b69a3;"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="order-unit-price">Price per Single Egg ($) *</label>
+                        <input type="number" step="0.001" id="order-unit-price" required placeholder="0.075" oninput="calculateOrderTotal()">
+                    </div>
+                </div>
+
+                <div class="form-row" style="background: #f0f4f8; padding: 10px; border-radius: 6px;">
+                    <div class="form-group">
+                        <label for="order-discount">Discount ($)</label>
+                        <input type="number" step="0.01" id="order-discount" value="0" placeholder="0.00" oninput="calculateOrderTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #102a43;">Total Invoice Amount</label>
+                        <div id="order-display-total" style="font-size: 1.4rem; font-weight: bold; color: #155724; margin-top: 4px;">$0.00</div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 10px;">
+                    <label for="order-remarks">Delivery Remarks</label>
+                    <input type="text" id="order-remarks" placeholder="e.g. Delivered to wholesale market stall 4">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="secondary" onclick="closeOrderModal()">Cancel</button>
+                    <button type="submit">Save Egg Sale</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Register Customer -->
+    <div class="modal-overlay" id="customer-modal">
+        <div class="modal-dialog">
+            <h2 id="customer-modal-title" style="margin-top: 0; margin-bottom: 14px;">Register New Customer</h2>
+            <form id="customer-form" onsubmit="handleSaveCustomer(event)">
+                <input type="hidden" id="customer-id">
+
+                <div class="form-group">
+                    <label for="customer-name">Customer / Business Name *</label>
+                    <input type="text" id="customer-name" required placeholder="e.g. Metro Egg Distributors">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customer-phone">Phone Number *</label>
+                        <input type="tel" id="customer-phone" required placeholder="e.g. +1 555-0199">
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-email">Email Address</label>
+                        <input type="email" id="customer-email" placeholder="customer@example.com">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="customer-address">Shop / Delivery Address *</label>
+                    <textarea id="customer-address" required rows="2" placeholder="Street, Market Stall #, City"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="secondary" onclick="closeCustomerModal()">Cancel</button>
+                    <button type="submit">Save Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Record Payment -->
+    <div class="modal-overlay" id="payment-modal">
+        <div class="modal-dialog">
+            <h2 id="payment-modal-title" style="margin-top: 0; margin-bottom: 14px;">Record Payment Receipt</h2>
+            <form id="payment-form" onsubmit="handleSavePayment(event)">
+                <input type="hidden" id="payment-id">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="payment-customer-id">Customer *</label>
+                        <select id="payment-customer-id" required>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-date">Payment Date *</label>
+                        <input type="date" id="payment-date" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="payment-amount">Payment Amount ($) *</label>
+                        <input type="number" step="0.01" id="payment-amount" required placeholder="e.g. 500.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-mode">Payment Mode *</label>
+                        <select id="payment-mode" required>
+                            <option value="Cash">Cash</option>
+                            <option value="Online / UPI">Online / UPI</option>
+                            <option value="Bank Transfer">Bank Transfer (NEFT/IMPS)</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Card">Debit / Credit Card</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="payment-remarks">Payment Reference / Transaction ID</label>
+                    <input type="text" id="payment-remarks" placeholder="e.g. UPI Ref 9283748239, Cheque #00492">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="secondary" onclick="closePaymentModal()">Cancel</button>
+                    <button type="submit">Record Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Set Daily Egg Rate -->
+    <div class="modal-overlay" id="rate-modal">
+        <div class="modal-dialog">
+            <h2 style="margin-top: 0; margin-bottom: 14px;">Set Today's Egg Market Rate</h2>
+            <form id="rate-form" onsubmit="handleSaveRate(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="rate-date">Effective Date *</label>
+                        <input type="date" id="rate-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rate-product-name">Product Name *</label>
+                        <input type="text" id="rate-product-name" required value="Standard Table Eggs">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="rate-price">Rate per Single Egg ($) *</label>
+                    <input type="number" step="0.001" id="rate-price" required placeholder="0.075" oninput="updateRatePreviews()">
+                </div>
+
+                <div style="background: #f0f4f8; padding: 12px; border-radius: 6px; margin-bottom: 14px;">
+                    <div style="font-size: 0.85rem; color: #627d98;">Tray (30 eggs): <strong id="preview-tray-price" style="color: #102a43;">$0.00</strong></div>
+                    <div style="font-size: 0.85rem; color: #627d98; margin-top: 4px;">Per 100 eggs: <strong id="preview-hundred-price" style="color: #102a43;">$0.00</strong></div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="secondary" onclick="closeRateModal()">Cancel</button>
+                    <button type="submit">Publish Rate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/sales-finance-hub.js"></script>
+</body>
+</html>

@@ -216,6 +216,37 @@ def delete_payment(payment_id):
     """
     payment = Payment.query.get_or_404(payment_id)
     payment.is_deleted = True
+    payment.deleted_at = datetime.utcnow()
+    payment.deleted_by = request.args.get("deleted_by", "system")
     mark_updated(payment)
     db.session.commit()
     return jsonify({"message": "Payment deleted"}), 200
+
+
+@payments_bp.route("/<int:payment_id>/restore", methods=["POST"])
+def restore_payment(payment_id):
+    """
+    Restore an archived payment
+    ---
+    tags:
+      - Payments
+    parameters:
+      - in: path
+        name: payment_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Payment restored
+      404:
+        description: Payment not found
+    """
+    payment = Payment.query.filter_by(payment_id=payment_id).first()
+    if not payment:
+        return jsonify({"error": "Payment not found"}), 404
+    payment.is_deleted = False
+    payment.deleted_at = None
+    payment.deleted_by = None
+    mark_updated(payment)
+    db.session.commit()
+    return jsonify({"message": "Payment restored successfully", "payment": payment.as_dict()})

@@ -28,6 +28,10 @@
             <input type="date" id="analysis-date" style="margin: 0; width: 170px;" onchange="loadDailyAnalysis()">
             <button type="button" class="secondary btn-sm" onclick="setAnalysisDate(today())">Today</button>
             <button type="button" class="secondary btn-sm" onclick="setAnalysisDate('2026-10-05')">Oct 05 (Mock Date)</button>
+            <label for="filter-batch-id" style="margin: 0; font-weight: 600; margin-left: 10px;">Batch:</label>
+            <select id="filter-batch-id" style="margin: 0; width: 200px;" onchange="loadDailyAnalysis()">
+                <option value="">All Batches (Farm-wide)</option>
+            </select>
         </div>
         <div>
             <span id="analysis-status-pill" style="padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; background: #e2e8f0; color: #486581;">Loading...</span>
@@ -124,6 +128,34 @@
                     <span id="comp-net-profit" style="font-weight: bold; color: #046c4e;">$0.00</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Shed & Batch Performance Breakdown -->
+    <div class="panel">
+        <h2 style="font-size: 1.2rem; margin-top: 0;">🛖 Flock & Shed Batch Performance Breakdown</h2>
+        <p style="color: #627d98; font-size: 0.9rem;">Compare feed cost per bird, laying percentage, and production cost per egg across Shed A, Shed B, and active flock batches.</p>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Batch Name</th>
+                        <th>Shed</th>
+                        <th>Breed & Age</th>
+                        <th>Active Birds</th>
+                        <th>Mortality</th>
+                        <th>Feed Consumed</th>
+                        <th>Feed Cost</th>
+                        <th>Cost / Bird</th>
+                        <th>Eggs Produced</th>
+                        <th>Laying Rate (%)</th>
+                        <th>Cost / Egg</th>
+                    </tr>
+                </thead>
+                <tbody id="batch-breakdown-body">
+                    <tr><td colspan="11" style="text-align: center;">Loading batch performance...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 

@@ -165,6 +165,37 @@ def delete_customer(customer_id):
     """
     customer = Customer.query.get_or_404(customer_id)
     customer.is_deleted = True
+    customer.deleted_at = datetime.utcnow()
+    customer.deleted_by = request.args.get("deleted_by", "system")
     mark_updated(customer)
     db.session.commit()
     return jsonify({"message": "Customer deleted"}), 200
+
+
+@customers_bp.route("/<int:customer_id>/restore", methods=["POST"])
+def restore_customer(customer_id):
+    """
+    Restore an archived customer
+    ---
+    tags:
+      - Customers
+    parameters:
+      - in: path
+        name: customer_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Customer restored
+      404:
+        description: Customer not found
+    """
+    customer = Customer.query.filter_by(customer_id=customer_id).first()
+    if not customer:
+        return jsonify({"error": "Customer not found"}), 404
+    customer.is_deleted = False
+    customer.deleted_at = None
+    customer.deleted_by = None
+    mark_updated(customer)
+    db.session.commit()
+    return jsonify({"message": "Customer restored successfully", "customer": customer.as_dict()})

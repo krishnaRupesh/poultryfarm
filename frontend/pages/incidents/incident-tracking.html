@@ -12,15 +12,37 @@
         <a class="back-link" href="../../index.html">Dashboard</a>
         <a class="back-link" href="new-incident.html">Create Incident</a>
     </div>
+    <div id="status-message" class="status"></div>
+    <div class="panel" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <label for="filter-shed" style="margin: 0;">Shed:</label>
+            <select id="filter-shed" onchange="loadIncidents()" style="margin: 0; width: 160px;">
+                <option value="">All Sheds</option>
+            </select>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <label for="filter-batch" style="margin: 0;">Batch:</label>
+            <select id="filter-batch" onchange="loadIncidents()" style="margin: 0; width: 170px;">
+                <option value="">All Batches</option>
+            </select>
+        </div>
+        <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; font-weight: 500;">
+            <input type="checkbox" id="show-archived" onchange="loadIncidents()" style="margin: 0;">
+            Show Archived (Deleted) Records
+        </label>
+    </div>
     <table>
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Incident Type</th>
+                <th>Incident Name</th>
+                <th>Type</th>
+                <th>Shed</th>
+                <th>Flock Batch</th>
                 <th>Incident Date</th>
                 <th>Summary</th>
                 <th>Amount Spent</th>
-                <th>Action</th>
+                <th>Status</th>
+                <th style="width: 170px;">Action</th>
             </tr>
         </thead>
         <tbody id="incident-list">

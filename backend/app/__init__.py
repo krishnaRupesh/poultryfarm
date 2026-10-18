@@ -14,6 +14,7 @@ from .routes.products import products_bp
 from .routes.feed_inventory import feed_inventory_bp
 from .routes.daily_operations import daily_operations_bp
 from .routes.cost_analysis import cost_analysis_bp
+from .routes.flock_management import flock_management_bp
 
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
@@ -38,15 +39,17 @@ def create_app(config_class=Config):
     app.register_blueprint(feed_inventory_bp, url_prefix="/api/feed")
     app.register_blueprint(daily_operations_bp, url_prefix="/api/daily")
     app.register_blueprint(cost_analysis_bp, url_prefix="/api/analysis")
+    app.register_blueprint(flock_management_bp, url_prefix="/api/flock")
 
     swagger_template = {
         "swagger": "2.0",
         "info": {
             "title": "Poultry Farm Management & Finance API",
-            "description": "API documentation for feed inventory, daily operations, cost-per-egg analysis, orders, payments, products, and customer balances.",
-            "version": "2.0.0",
+            "description": "API documentation for feed inventory, daily operations, cost-per-egg analysis, orders, payments, products, customer balances, and flock/shed management.",
+            "version": "2.1.0",
         },
         "tags": [
+            {"name": "Flock & Shed Management", "description": "Manage poultry sheds and flock batches (e.g. 2026-march-a)"},
             {"name": "Feed Inventory", "description": "Manage poultry feed ingredients, stock levels, and valuations"},
             {"name": "Feed Purchases", "description": "Feed procurement, stock-in batches, and weighted average costing"},
             {"name": "Daily Operations", "description": "Daily live flock count, feeding consumption, and egg production/sales"},
